@@ -14,6 +14,26 @@ async def process_buy_callback(callback: CallbackQuery):
         return
 
     parts = callback.data.split("_")
+    item_type = parts[1]
+    amount = parts[2]
+    stars = parts[3]
+    
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="⭐️ Stars (Instant)", callback_data=f"paystars_{item_type}_{amount}_{stars}")],
+        [InlineKeyboardButton(text="💳 Other", callback_data=f"payother_{item_type}_{amount}_{stars}")],
+        [InlineKeyboardButton(text="🔙 Cancel", callback_data="main_menu")]
+    ])
+    
+    await callback.message.edit_text("<b>How would you like to pay?</b>", reply_markup=markup, parse_mode="HTML")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("paystars_"))
+async def process_paystars_callback(callback: CallbackQuery):
+    if await is_banned(callback.from_user.id):
+        await callback.answer("You are banned.", show_alert=True)
+        return
+
+    parts = callback.data.split("_")
     item_type = parts[1] # "gems" or "premium"
     
     if item_type == "gems":
@@ -43,6 +63,33 @@ async def process_buy_callback(callback: CallbackQuery):
         currency="XTR",
         prices=prices,
     )
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("payother_"))
+async def process_payother_callback(callback: CallbackQuery):
+    if await is_banned(callback.from_user.id):
+        await callback.answer("You are banned.", show_alert=True)
+        return
+
+    parts = callback.data.split("_")
+    item_type = parts[1]
+    amount = parts[2]
+    
+    # Generate link to chosentwo_bot
+    deep_link = f"https://t.me/chosentwo_bot?start={item_type}_{amount}"
+    
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="Contact Support to Pay", url=deep_link)],
+        [InlineKeyboardButton(text="🔙 Back", callback_data="main_menu")]
+    ])
+    
+    msg = (
+        "💳 <b>Other Payment Methods</b>\n\n"
+        "We accept <b>INR (UPI)</b> and <b>Crypto</b> payments.\n\n"
+        "Please click the button below to contact our support bot to process your payment manually."
+    )
+    
+    await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
     await callback.answer()
 
 @router.pre_checkout_query()
