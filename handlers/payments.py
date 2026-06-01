@@ -19,12 +19,12 @@ async def process_buy_callback(callback: CallbackQuery):
     stars = parts[3]
     
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⭐️ Stars (Instant)", callback_data=f"paystars_{item_type}_{amount}_{stars}")],
-        [InlineKeyboardButton(text="💳 Other", callback_data=f"payother_{item_type}_{amount}_{stars}")],
+        [InlineKeyboardButton(text="⭐️ Stars (Instant)", callback_data=f"paystars_{item_type}_{amount}_{stars}",style="primary"),
+        InlineKeyboardButton(text="💳 Other", callback_data=f"payother_{item_type}_{amount}_{stars}",style="primary")],
         [InlineKeyboardButton(text="🔙 Cancel", callback_data="main_menu")]
     ])
     
-    await callback.message.edit_text("<b>How would you like to pay?</b>", reply_markup=markup, parse_mode="HTML")
+    await callback.message.edit_text("<b>🥇How would you like to pay?</b>\n\n<i>✨Direct payment with Telegram Stars Or Manual other Payments</i>", reply_markup=markup, parse_mode="HTML")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("paystars_"))
