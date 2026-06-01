@@ -35,11 +35,11 @@ async def process_custom_amount(message: Message, state: FSMContext):
     stars = math.ceil(gems / config.GEMS_PER_STAR)
     
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"Pay {stars} ⭐️ for {gems} 💎", callback_data=f"buy_gems_{gems}_{stars}")],
+        [InlineKeyboardButton(text=f"Pay {stars} ⭐️ for {gems} 💎", callback_data=f"buy_gems_{gems}_{stars}", style="primary")],
         [InlineKeyboardButton(text="Cancel", callback_data="cancel_payment")]
     ])
     
-    await message.answer(f"You requested {gems} Gems.\nCost: {stars} Telegram Stars.", reply_markup=markup)
+    await message.answer(f"You requested {gems} Gems.\nCost: {stars} Telegram Stars.\n\n<i>Read the Terms of Service and Accept it Before Proceeding</i>\n\n<blockquote>⚠️ Please Use Gems Wisely</blockquote>", reply_markup=markup,parse_mode="HTML")
     await state.clear()
 
 @router.callback_query(F.data == "cancel_payment")
