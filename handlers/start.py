@@ -91,7 +91,24 @@ async def process_show_gems(callback: CallbackQuery):
     if await is_banned(callback.from_user.id):
         await callback.answer("You are banned.", show_alert=True)
         return
-    await callback.message.edit_text("Select a Gems package to purchase:", reply_markup=get_gems_keyboard())
+    msg = f"""💎 <b>Buy Gems</b>
+
+Gems power <b>Promo Join Campaigns</b>, helping you gain verified members for your channel or group.
+
+✨ <b>With Gems you can:</b>
+• 🚀 Launch Promo Join campaigns
+• 👥 Get verified joins
+• 📈 Grow your community faster
+• 🎯 Access higher campaign tiers
+<blockquote>
+More Gems = More campaigns = More opportunities to gain verified members.
+</blockquote>
+💡 Premium users spend fewer Gems on Promo Join tiers.
+
+📖 <a href="https://promoter-jwe5.onrender.com/promo-join.html?lang=en">Learn More About Promo Join</a>
+
+👇 Choose a Gem package below."""
+    await callback.message.edit_text(msg, reply_markup=get_gems_keyboard(), parse_mode="HTML")
 
 @router.callback_query(F.data == "show_premium")
 async def process_show_premium(callback: CallbackQuery):
