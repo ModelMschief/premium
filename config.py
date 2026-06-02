@@ -10,13 +10,15 @@ TARGET_BOT_USERNAME = os.getenv("TARGET_BOT_USERNAME", "anoni67_bot")
 # Pricing Configuration
 GEMS_PACKAGES = [
     {"name": "100 Gems", "gems": 100, "stars": 50},
-    {"name": "500 Gems", "gems": 500, "stars": 250},
-    {"name": "1000 Gems", "gems": 1000, "stars": 500},
+    {"name": "500 Gems", "gems": 500, "stars": 230},
+    {"name": "1000 Gems", "gems": 1000, "stars": 450},
+    {"name": "2000 Gems", "gems": 2000, "stars": 900},
 ]
 
 PREMIUM_PACKAGES = [
-    {"name": "30 Days Premium", "duration_days": 30, "stars": 1},
-    {"name": "90 Days Premium", "duration_days": 90, "stars": 360},
+    {"name": "30 Days Premium", "duration_days": 30, "stars": 120},
+    {"name": "60 Days Premium", "duration_days": 60, "stars": 220},
+    {"name": "90 Days Premium", "duration_days": 90, "stars": 340},
     {"name": "365 Days Premium", "duration_days": 365, "stars": 1250},
 ]
 
