@@ -24,7 +24,8 @@ def get_premium_keyboard() -> InlineKeyboardMarkup:
 def get_main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💎 Buy Gems", callback_data="show_gems", style="primary")],
-        [InlineKeyboardButton(text="👑 Buy Premium", callback_data="show_premium", style="primary")]
+        [InlineKeyboardButton(text="👑 Buy Premium", callback_data="show_premium", style="primary")],
+        [InlineKeyboardButton(text="💬 Buy Group Subscription", callback_data="show_groupsub_list", style="primary")]
     ])
 
 def get_welcome_text() -> str:
@@ -32,8 +33,9 @@ def get_welcome_text() -> str:
         "👋 *Welcome! to the Official Payment Bot!*\n\n"
         "🤝This bot is your central hub for purchasing Gems and Premium plans For our network of bots."
         "All purchases are securely processed \n\n"
-        "🔹 *Gems:* Use gems for special in-bot actions.\n"
-        "🔹 *Premium:* Unlock exclusive features and remove restrictions.\n\n"
+        "🔹 *Gems:* Use gems for special in-bot actions.(in @anoni67_bot)\n"
+        "🔹 *Premium:* Unlock exclusive features and remove restrictions.(in @anoni67_bot)\n"
+        "🔹 *Group Sub:* Buy access to send messages in our exclusive groups.\n\n"
         "Select an option below to browse our packages:"
     )
 
@@ -177,3 +179,92 @@ async def process_main_menu(callback: CallbackQuery):
         await callback.answer("You are banned.", show_alert=True)
         return
     await callback.message.edit_text(get_welcome_text(), reply_markup=get_main_keyboard(), parse_mode="Markdown")
+
+@router.callback_query(F.data == "show_groupsub_list")
+async def process_show_groupsub_list(callback: CallbackQuery):
+    if await is_banned(callback.from_user.id):
+        await callback.answer("You are banned.", show_alert=True)
+        return
+        
+    buttons = []
+    for chat_id in config.SUPPORTED_GROUPS:
+        try:
+            chat = await callback.bot.get_chat(chat_id)
+            title = chat.title or f"Group {chat_id}"
+            buttons.append([InlineKeyboardButton(text=f"📢 {title}", callback_data=f"check_group_{chat_id}", style="primary")])
+        except Exception:
+            buttons.append([InlineKeyboardButton(text=f"📢 Group {chat_id}", callback_data=f"check_group_{chat_id}", style="primary")])
+            
+    buttons.append([InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="main_menu")])
+    markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+    
+    msg = (
+        "💬 <b>Group Subscriptions</b>\n\n"
+        "To send messages in our exclusive groups, you need an active subscription. "
+        "This helps us maintain a high-quality community and prevent spam.\n\n"
+        "👇 Please select a group below to check your status or purchase a subscription:"
+    )
+    await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
+
+@router.callback_query(F.data.startswith("check_group_"))
+async def process_check_group(callback: CallbackQuery):
+    if await is_banned(callback.from_user.id):
+        await callback.answer("You are banned.", show_alert=True)
+        return
+        
+    chat_id = int(callback.data.split("_")[2])
+    
+    try:
+        chat = await callback.bot.get_chat(chat_id)
+        title = chat.title or f"Group {chat_id}"
+        invite_link = chat.invite_link
+        if not invite_link:
+            invite_link = await callback.bot.export_chat_invite_link(chat_id)
+    except Exception:
+        title = f"Group {chat_id}"
+        invite_link = None
+        
+    try:
+        member = await callback.bot.get_chat_member(chat_id, callback.from_user.id)
+        is_member = member.status not in ['left', 'kicked', 'banned']
+    except Exception:
+        is_member = False
+        
+    if not is_member:
+        # Not in group, send invite link
+        inline_buttons = []
+        if invite_link:
+            inline_buttons.append([InlineKeyboardButton(text="🔗 Join Group First", url=invite_link)])
+        inline_buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="show_groupsub_list")])
+        
+        markup = InlineKeyboardMarkup(inline_keyboard=inline_buttons)
+        await callback.message.edit_text(
+            f"❌ You are not a member of <b>{title}</b>.\n\n"
+            f"You must join the group before you can purchase a subscription for it.",
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+        return
+        
+    # Is a member, show packages
+    buttons = []
+    for pkg in config.GROUP_SUB_PACKAGES:
+        buttons.append([InlineKeyboardButton(
+            text=f"💎 {pkg['name']} - {pkg['stars']} ⭐️", 
+            callback_data=f"buy_groupsub_{chat_id}_{pkg['duration_days']}_{pkg['stars']}",
+            style="primary"
+        )])
+    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="show_groupsub_list")])
+    markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+    
+    chat_link = f"<a href='{invite_link}'>{title}</a>" if invite_link else f"<b>{title}</b>"
+    
+    await callback.message.edit_text(
+        f"💎 <b>Subscription for {chat_link}</b>\n\n"
+        "✅ You are a member!\n\n"
+        "Choose a subscription package below to enable messaging in this group.",
+        reply_markup=markup,
+        parse_mode="HTML",
+        disable_web_page_preview=True
+    )
+
