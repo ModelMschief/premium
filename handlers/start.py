@@ -30,12 +30,12 @@ def get_main_keyboard() -> InlineKeyboardMarkup:
 
 def get_welcome_text() -> str:
     return (
-        "👋 *Welcome! to the Official Payment Bot!*\n\n"
-        "🤝This bot is your central hub for purchasing Gems and Premium plans For our network of bots."
-        "All purchases are securely processed \n\n"
-        "🔹 *Gems:* Use gems for special in-bot actions.(in @anoni67_bot)\n"
-        "🔹 *Premium:* Unlock exclusive features and remove restrictions.(in @anoni67_bot)\n"
-        "🔹 *Group Sub:* Buy access to send messages in our exclusive groups.\n\n"
+        "👋 <b>Welcome! to the Official Payment Bot!</b>\n\n"
+        "🤝 This bot is your central hub for purchasing Gems and Premium plans For our network of bots. "
+        "All purchases are securely processed.\n\n"
+        "🔹 <b>Gems:</b> Use gems for special in-bot actions. (in @anoni67_bot)\n"
+        "🔹 <b>Premium:</b> Unlock exclusive features and remove restrictions. (in @anoni67_bot)\n"
+        "🔹 <b>Group Sub:</b> Buy access to send messages in our exclusive groups.\n\n"
         "Select an option below to browse our packages:"
     )
 
@@ -66,20 +66,36 @@ async def cmd_start(message: Message, command: CommandObject):
         except Exception:
             pass # Ignore if bot can't check
             
+        # Try to get chat info for a nice display
+        try:
+            chat = await message.bot.get_chat(chat_id)
+            title = chat.title or f"Group {chat_id}"
+            invite_link = chat.invite_link
+            if not invite_link:
+                invite_link = await message.bot.export_chat_invite_link(chat_id)
+        except Exception:
+            title = f"Group {chat_id}"
+            invite_link = None
+            
+        chat_link = f"<a href='{invite_link}'>{title}</a>" if invite_link else f"<b>{title}</b>"
+            
         buttons = []
         for pkg in config.GROUP_SUB_PACKAGES:
             buttons.append([InlineKeyboardButton(
                 text=f"💎 {pkg['name']} - {pkg['stars']} ⭐️", 
-                callback_data=f"buy_groupsub_{chat_id}_{pkg['duration_days']}_{pkg['stars']}"
+                callback_data=f"buy_groupsub_{chat_id}_{pkg['duration_days']}_{pkg['stars']}",
+                style="primary"
             )])
         buttons.append([InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")])
         markup = InlineKeyboardMarkup(inline_keyboard=buttons)
         
         await message.answer(
-            "💎 <b>Group Subscription</b>\n\n"
-            "Choose a subscription package to enable messaging in the group.",
+            f"💎 <b>Subscription for {chat_link}</b>\n\n"
+            "✅ You are a member!\n\n"
+            "Choose a subscription package below to enable messaging in this group.",
             reply_markup=markup,
-            parse_mode="HTML"
+            parse_mode="HTML",
+            disable_web_page_preview=True
         )
     elif args == "buygems":
         msg = f"""💎 <b>Buy Gems</b>
@@ -121,7 +137,7 @@ Premium helps your campaigns get noticed faster while unlocking advanced promoti
 👇 Select a premium plan below to to purchase"""
         await message.answer(msg, reply_markup=get_premium_keyboard(), parse_mode="HTML")
     else:
-        await message.answer(get_welcome_text(), reply_markup=get_main_keyboard(), parse_mode="Markdown")
+        await message.answer(get_welcome_text(), reply_markup=get_main_keyboard(), parse_mode="HTML")
 
 @router.callback_query(F.data == "show_gems")
 async def process_show_gems(callback: CallbackQuery):
@@ -178,7 +194,7 @@ async def process_main_menu(callback: CallbackQuery):
     if await is_banned(callback.from_user.id):
         await callback.answer("You are banned.", show_alert=True)
         return
-    await callback.message.edit_text(get_welcome_text(), reply_markup=get_main_keyboard(), parse_mode="Markdown")
+    await callback.message.edit_text(get_welcome_text(), reply_markup=get_main_keyboard(), parse_mode="HTML")
 
 @router.callback_query(F.data == "show_groupsub_list")
 async def process_show_groupsub_list(callback: CallbackQuery):
