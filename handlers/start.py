@@ -29,7 +29,7 @@ def get_main_keyboard() -> InlineKeyboardMarkup:
 
 def get_welcome_text() -> str:
     return (
-        "👋 *Welcome to the Official Payment Bot!*\n\n"
+        "👋 *Welcome! to the Official Payment Bot!*\n\n"
         "🤝This bot is your central hub for purchasing Gems and Premium plans For our network of bots."
         "All purchases are securely processed \n\n"
         "🔹 *Gems:* Use gems for special in-bot actions.\n"
@@ -44,7 +44,42 @@ async def cmd_start(message: Message, command: CommandObject):
         return
 
     args = command.args
-    if args == "buygems":
+    if args and args.startswith("subs_"):
+        try:
+            chat_id = int(args.split("_")[1])
+        except (IndexError, ValueError):
+            await message.answer("Invalid subscription link.")
+            return
+            
+        if chat_id not in config.SUPPORTED_GROUPS:
+            await message.answer("This group is not supported for subscriptions.")
+            return
+            
+        # Verify user is in group
+        try:
+            member = await message.bot.get_chat_member(chat_id, message.from_user.id)
+            if member.status in ['left', 'kicked', 'banned']:
+                await message.answer("You must be a member of the group to purchase a subscription.")
+                return
+        except Exception:
+            pass # Ignore if bot can't check
+            
+        buttons = []
+        for pkg in config.GROUP_SUB_PACKAGES:
+            buttons.append([InlineKeyboardButton(
+                text=f"💎 {pkg['name']} - {pkg['stars']} ⭐️", 
+                callback_data=f"buy_groupsub_{chat_id}_{pkg['duration_days']}_{pkg['stars']}"
+            )])
+        buttons.append([InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")])
+        markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+        
+        await message.answer(
+            "💎 <b>Group Subscription</b>\n\n"
+            "Choose a subscription package to enable messaging in the group.",
+            reply_markup=markup,
+            parse_mode="HTML"
+        )
+    elif args == "buygems":
         msg = f"""💎 <b>Buy Gems</b>
 
 Gems power <b>Promo Join Campaigns</b>, helping you gain verified members for your channel or group.

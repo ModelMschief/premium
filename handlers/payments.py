@@ -1,7 +1,7 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, PreCheckoutQuery, Message, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 from database.mongo import is_banned, save_gem_payment, save_premium_payment
-from database.sqlite import log_local_payment
+from database.sqlite import log_local_payment, extend_group_subscription
 import config
 import shortuuid
 
@@ -15,12 +15,23 @@ async def process_buy_callback(callback: CallbackQuery):
 
     parts = callback.data.split("_")
     item_type = parts[1]
-    amount = parts[2]
-    stars = parts[3]
+    
+    if item_type == "groupsub":
+        chat_id = parts[2]
+        amount = parts[3]
+        stars = parts[4]
+        # the payload to pass along:
+        callback_paystars = f"paystars_{item_type}_{chat_id}_{amount}_{stars}"
+        callback_payother = f"payother_{item_type}_{chat_id}_{amount}_{stars}"
+    else:
+        amount = parts[2]
+        stars = parts[3]
+        callback_paystars = f"paystars_{item_type}_{amount}_{stars}"
+        callback_payother = f"payother_{item_type}_{amount}_{stars}"
     
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⭐️ Stars (Instant)", callback_data=f"paystars_{item_type}_{amount}_{stars}",style="primary"),
-        InlineKeyboardButton(text="💳 Other", callback_data=f"payother_{item_type}_{amount}_{stars}",style="primary")],
+        [InlineKeyboardButton(text="⭐️ Stars (Instant)", callback_data=callback_paystars,style="primary"),
+        InlineKeyboardButton(text="💳 Other", callback_data=callback_payother,style="primary")],
         [InlineKeyboardButton(text="🔙 Cancel", callback_data="main_menu")]
     ])
     
@@ -34,7 +45,7 @@ async def process_paystars_callback(callback: CallbackQuery):
         return
 
     parts = callback.data.split("_")
-    item_type = parts[1] # "gems" or "premium"
+    item_type = parts[1] # "gems", "premium", or "groupsub"
     
     if item_type == "gems":
         gems_amount = int(parts[2])
@@ -48,6 +59,13 @@ async def process_paystars_callback(callback: CallbackQuery):
         title = f"{duration_days} Days Premium"
         description = f"Purchase {duration_days} Days Premium for {stars_amount} Telegram Stars."
         payload = f"premium_{duration_days}_{stars_amount}"
+    elif item_type == "groupsub":
+        chat_id = parts[2]
+        duration_days = int(parts[3])
+        stars_amount = int(parts[4])
+        title = f"Group Access ({duration_days} Days)"
+        description = f"Purchase {duration_days} Days of group messaging access for {stars_amount} Telegram Stars."
+        payload = f"groupsub_{chat_id}_{duration_days}_{stars_amount}"
     else:
         await callback.answer("Invalid package.", show_alert=True)
         return
@@ -117,25 +135,69 @@ async def process_successful_payment(message: Message):
         await save_gem_payment(payment_id, user_id, username, package_name, gems_amount, stars_amount)
         log_local_payment(user_id, payment_id, package_name)
         start_payload = f"gems_{payment_id}"
+        
+        target_bot = config.TARGET_BOT_USERNAME
+        deep_link = f"https://t.me/{target_bot}?start={start_payload}"
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link)]
+        ])
+        success_msg = (
+            f"✅ Payment successful!\n\n"
+            f"Item: {package_name}\n"
+            f"Payment ID: `{payment_id}`\n\n"
+            f"Click the button below to verify and claim your reward in the Promotion Bot."
+        )
+
     elif item_type == "premium":
         duration_days = int(parts[1])
         package_name = f"{duration_days} Days Premium"
         await save_premium_payment(payment_id, user_id, username, package_name, duration_days, stars_amount)
         log_local_payment(user_id, payment_id, package_name)
         start_payload = f"premium_{payment_id}"
+        
+        target_bot = config.TARGET_BOT_USERNAME
+        deep_link = f"https://t.me/{target_bot}?start={start_payload}"
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link)]
+        ])
+        success_msg = (
+            f"✅ Payment successful!\n\n"
+            f"Item: {package_name}\n"
+            f"Payment ID: `{payment_id}`\n\n"
+            f"Click the button below to verify and claim your reward in the Promotion Bot."
+        )
 
-    target_bot = config.TARGET_BOT_USERNAME
-    deep_link = f"https://t.me/{target_bot}?start={start_payload}"
+    elif item_type == "groupsub":
+        chat_id = int(parts[1])
+        duration_days = int(parts[2])
+        package_name = f"Group Access {duration_days} Days"
+        
+        # Extend subscription in SQLite
+        extend_group_subscription(user_id, chat_id, duration_days)
+        log_local_payment(user_id, payment_id, package_name)
+        
+        markup = None
+        success_msg = (
+            f"✅ Payment successful!\n\n"
+            f"Item: {package_name}\n"
+            f"Payment ID: `{payment_id}`\n\n"
+            f"Your group subscription is now active! You can now send messages in the group."
+        )
 
-    markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link)]
-    ])
-
-    await message.answer(
-        f"✅ Payment successful!\n\n"
-        f"Item: {package_name}\n"
-        f"Payment ID: `{payment_id}`\n\n"
-        f"Click the button below to verify and claim your reward in the Promotion Bot.",
-        reply_markup=markup,
-        parse_mode="Markdown"
-    )
+    if markup:
+        await message.answer(success_msg, reply_markup=markup, parse_mode="Markdown")
+    else:
+        await message.answer(success_msg, parse_mode="Markdown")
+        
+    try:
+        admin_msg = (
+            f"🔔 <b>New Payment Received!</b>\n\n"
+            f"👤 User: <a href='tg://user?id={user_id}'>{message.from_user.first_name}</a> (ID: <code>{user_id}</code>)\n"
+            f"🛍 Item: <b>{package_name}</b>\n"
+            f"💰 Amount: <b>{stars_amount} Stars</b>\n"
+            f"🧾 Payment ID: <code>{payment_id}</code>"
+        )
+        await message.bot.send_message(config.ADMIN_ID, admin_msg, parse_mode="HTML")
+    except Exception as e:
+        import logging
+        logging.error(f"Failed to notify admin: {e}")

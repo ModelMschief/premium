@@ -3,7 +3,7 @@ import logging
 from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 import config
-from handlers import start, custom_amount, payments
+from handlers import start, custom_amount, payments, groups
 
 logging.basicConfig(level=logging.INFO)
 
@@ -14,6 +14,7 @@ async def main():
     dp.include_router(start.router)
     dp.include_router(custom_amount.router)
     dp.include_router(payments.router)
+    dp.include_router(groups.router)
 
     logging.info("Starting Telegram Payment Bot...")
     await bot.delete_webhook(drop_pending_updates=True)
