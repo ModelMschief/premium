@@ -84,7 +84,7 @@ async def group_message_handler(message: Message, bot: Bot):
             warning_text = (
                 f"⚠️ <a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>, you need an active subscription "
                 f"to send messages in this group.\n\n"
-                f"<blocquote>Or Use @anoni67_bot to send messages in this group</blocquote>"
+                f"<blockquote>Or Use @anoni67_bot to send messages in this group</blockquote>"
                 f"\n\n<b>Please purchase a subscription via the bot</b>.✨"
             )
             
