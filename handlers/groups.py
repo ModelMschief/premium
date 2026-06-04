@@ -82,7 +82,7 @@ async def group_message_handler(message: Message, bot: Bot):
             ])
             
             warning_text = (
-                f"⚠️ <a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>! Become the only few privileged users with access to Message here, by subscribing.✨\n\n"
+                f"⚠️ <a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>! Become the only few privileged users with access to Message here, by subscribing.✨"
                 f"\n\n<i>🥇Subscribe And Become Unstoppable here🥇</i> \n\n"
                 f"<blockquote>Or Use @anoni67_bot to send messages in this group</blockquote>"
                 f"\n\n<b>Please purchase a subscription via the bot</b>.✨"
