@@ -30,7 +30,7 @@ def get_main_keyboard() -> InlineKeyboardMarkup:
 
 def get_welcome_text() -> str:
     return (
-        "👋 <b>Welcome! to the Official Payment Bot!</b>\n\n"
+        "👋 <b>Welcome! to the Official Payment Bot!</b>✨\n\n"
         "🤝 This bot is your central hub for purchasing Gems and Premium plans For our network of bots. "
         "All purchases are securely processed.\n\n"
         "🔹 <b>Gems:</b> Use gems for special in-bot actions. (in @anoni67_bot)\n"
