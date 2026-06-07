@@ -10,17 +10,17 @@ ADMIN_ID = 1928631932 # Admin ID to notify on successful payments
 
 # Pricing Configuration
 GEMS_PACKAGES = [
-    {"name": "100 Gems", "gems": 100, "stars": 50},
-    {"name": "500 Gems", "gems": 500, "stars": 230},
-    {"name": "1000 Gems", "gems": 1000, "stars": 450},
-    {"name": "2000 Gems", "gems": 2000, "stars": 900},
+    {"name": "100 Gems", "gems": 100, "stars": 50, "USDT":1},
+    {"name": "500 Gems", "gems": 500, "stars": 230, "USDT":4.5},
+    {"name": "1000 Gems", "gems": 1000, "stars": 450, "USDT":9},
+    {"name": "2000 Gems", "gems": 2000, "stars": 900, "USDT":17},
 ]
 
 PREMIUM_PACKAGES = [
-    {"name": "30 Days Premium", "duration_days": 30, "stars": 120},
-    {"name": "60 Days Premium", "duration_days": 60, "stars": 220},
-    {"name": "90 Days Premium", "duration_days": 90, "stars": 340},
-    {"name": "365 Days Premium", "duration_days": 365, "stars": 1250},
+    {"name": "30 Days ", "duration_days": 30, "stars": 120, "USDT":4},
+    {"name": "60 Days ", "duration_days": 60, "stars": 220, "USDT":7},
+    {"name": "90 Days ", "duration_days": 90, "stars": 340, "USDT":12},
+    {"name": "365 Days ", "duration_days": 365, "stars": 1250, "USDT":34},
 ]
 
 # Conversion rate for custom gems (e.g., 2 Gems = 1 Star)

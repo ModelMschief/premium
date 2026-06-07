@@ -9,7 +9,7 @@ router = Router()
 def get_gems_keyboard() -> InlineKeyboardMarkup:
     buttons = []
     for pkg in config.GEMS_PACKAGES:
-        buttons.append([InlineKeyboardButton(text=f"💎 {pkg['name']} - {pkg['stars']} ⭐️", callback_data=f"buy_gems_{pkg['gems']}_{pkg['stars']}", style="primary")])
+        buttons.append([InlineKeyboardButton(text=f"💎 {pkg['name']}-{pkg['stars']} ⭐️ or ({pkg['USDT']} USDT)", callback_data=f"buy_gems_{pkg['gems']}_{pkg['stars']}", style="primary")])
     buttons.append([InlineKeyboardButton(text="✍️ Custom Amount", callback_data="custom_gems",style="success")])
     buttons.append([InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="main_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -17,7 +17,7 @@ def get_gems_keyboard() -> InlineKeyboardMarkup:
 def get_premium_keyboard() -> InlineKeyboardMarkup:
     buttons = []
     for pkg in config.PREMIUM_PACKAGES:
-        buttons.append([InlineKeyboardButton(text=f"👑 {pkg['name']} - {pkg['stars']} ⭐️", callback_data=f"buy_premium_{pkg['duration_days']}_{pkg['stars']}", style="primary")])
+        buttons.append([InlineKeyboardButton(text=f"👑 {pkg['name']}-{pkg['stars']} ⭐️ or ({pkg['USDT']} USDT)", callback_data=f"buy_premium_{pkg['duration_days']}_{pkg['stars']}", style="primary")])
     buttons.append([InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="main_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
