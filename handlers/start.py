@@ -42,7 +42,7 @@ def get_welcome_text() -> str:
 @router.message(CommandStart())
 async def cmd_start(message: Message, command: CommandObject):
     if await is_banned(message.from_user.id):
-        await message.answer("You are banned from using this bot. request a unban @chosentwo_bot")
+        await message.answer("You are banned from using this bot. Request a unban @chosentwo_bot")
         return
 
     args = command.args
