@@ -123,6 +123,10 @@ async def process_paycrypto_callback(callback: CallbackQuery):
         usdt_amount = stars_amount * 0.02
         
     if usdt_amount <= 0:
+        # Fallback for custom amounts not defined in config
+        usdt_amount = round(stars_amount * 0.02, 2)
+        
+    if usdt_amount <= 0:
         await callback.answer("Crypto payment is not available for this package.", show_alert=True)
         return
         
