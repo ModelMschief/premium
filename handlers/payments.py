@@ -1,9 +1,10 @@
 from aiogram import Router, F
 from aiogram.types import CallbackQuery, PreCheckoutQuery, Message, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
 from database.mongo import is_banned, save_gem_payment, save_premium_payment
-from database.sqlite import log_local_payment, extend_group_subscription
+from database.sqlite import log_local_payment, extend_group_subscription, get_pending_crypto_invoices, add_crypto_invoice, update_crypto_invoice_status
 import config
 import shortuuid
+import aiohttp
 
 router = Router()
 
@@ -22,20 +23,23 @@ async def process_buy_callback(callback: CallbackQuery):
         stars = parts[4]
         # the payload to pass along:
         callback_paystars = f"paystars_{item_type}_{chat_id}_{amount}_{stars}"
+        callback_paycrypto = f"paycrypto_{item_type}_{chat_id}_{amount}_{stars}"
         callback_payother = f"payother_{item_type}_{chat_id}_{amount}_{stars}"
     else:
         amount = parts[2]
         stars = parts[3]
         callback_paystars = f"paystars_{item_type}_{amount}_{stars}"
+        callback_paycrypto = f"paycrypto_{item_type}_{amount}_{stars}"
         callback_payother = f"payother_{item_type}_{amount}_{stars}"
     
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⭐️ Stars (Instant)", callback_data=callback_paystars,style="primary"),
-        InlineKeyboardButton(text="💳 Other", callback_data=callback_payother,style="primary")],
+        [InlineKeyboardButton(text="⭐️ Stars (Instant)", callback_data=callback_paystars,style="primary")],
+        [InlineKeyboardButton(text="🪙 Crypto (USDT)", callback_data=callback_paycrypto,style="primary")],
+        [InlineKeyboardButton(text="💳 INR (UPI)", callback_data=callback_payother,style="primary")],
         [InlineKeyboardButton(text="🔙 Cancel", callback_data="main_menu")]
     ])
     
-    await callback.message.edit_text("<b>🥇How would you like to pay?</b>\n\n<i>✨Direct payment with Telegram Stars Or Manual other Payments</i>", reply_markup=markup, parse_mode="HTML")
+    await callback.message.edit_text("<b>🥇How would you like to pay?</b>\n\n<i>✨Direct payment with Telegram Stars or automated Crypto (USDT BEP20)</i>", reply_markup=markup, parse_mode="HTML")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("paystars_"))
@@ -83,6 +87,208 @@ async def process_paystars_callback(callback: CallbackQuery):
     )
     await callback.answer()
 
+@router.callback_query(F.data.startswith("paycrypto_"))
+async def process_paycrypto_callback(callback: CallbackQuery):
+    if await is_banned(callback.from_user.id):
+        await callback.answer("You are banned.", show_alert=True)
+        return
+
+    parts = callback.data.split("_")
+    item_type = parts[1]
+    
+    usdt_amount = 0
+    package_name = ""
+    
+    if item_type == "gems":
+        gems_amount = int(parts[2])
+        stars_amount = int(parts[3])
+        package_name = f"{gems_amount} Gems"
+        for pkg in config.GEMS_PACKAGES:
+            if pkg["gems"] == gems_amount:
+                usdt_amount = pkg.get("USDT", 0)
+                break
+    elif item_type == "premium":
+        duration_days = int(parts[2])
+        stars_amount = int(parts[3])
+        package_name = f"{duration_days} Days Premium"
+        for pkg in config.PREMIUM_PACKAGES:
+            if pkg["duration_days"] == duration_days:
+                usdt_amount = pkg.get("USDT", 0)
+                break
+    elif item_type == "groupsub":
+        chat_id = parts[2]
+        duration_days = int(parts[3])
+        stars_amount = int(parts[4])
+        package_name = f"Group Access {duration_days} Days"
+        usdt_amount = stars_amount * 0.02
+        
+    if usdt_amount <= 0:
+        await callback.answer("Crypto payment is not available for this package.", show_alert=True)
+        return
+        
+    user_id = callback.from_user.id
+    pending_invoices = get_pending_crypto_invoices(user_id)
+    if len(pending_invoices) >= 3:
+        buttons = []
+        for inv in pending_invoices:
+            buttons.append([InlineKeyboardButton(text=f"Cancel {inv['package_name']} ({inv['invoice_id'][:8]})", callback_data=f"cancelinvoice_{inv['invoice_id']}")])
+        buttons.append([InlineKeyboardButton(text="🔙 Cancel", callback_data="main_menu")])
+        markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+        await callback.message.edit_text(
+            "⚠️ <b>Limit Reached</b>\n\nYou have 3 pending crypto invoices. Please cancel one of them before creating a new one.", 
+            reply_markup=markup, parse_mode="HTML"
+        )
+        return
+        
+    callback_data_claim = callback.data.replace("paycrypto_", "claimcrypto_", 1)
+    
+    payload = {
+        "customerId": str(user_id),
+        "amount": str(usdt_amount),
+        "receivingAddress": config.BSC_RECEIVING_ADDRESS,
+        "callbackData": callback_data_claim,
+        "tempBotToken": config.BOT_TOKEN,
+        "botMessage": f"✅ Payment of {{amountPaid}} USDT verified!\n\nClick below to claim your {package_name}.",
+        "buttonText": "Claim Reward"
+    }
+    
+    headers = {"x-api-key": config.BSC_API_KEY}
+    
+    await callback.message.edit_text("⏳ Generating crypto invoice... Please wait.")
+    
+    async with aiohttp.ClientSession() as session:
+        async with session.post("https://bscusdtapi.onrender.com/api/invoices", json=payload, headers=headers) as resp:
+            if resp.status == 200:
+                data = await resp.json()
+                invoice_id = data["invoice"]["invoiceId"]
+                temp_address = data["tempWallet"]["address"]
+                
+                add_crypto_invoice(invoice_id, user_id, package_name, temp_address)
+                
+                markup = InlineKeyboardMarkup(inline_keyboard=[
+                    [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelinvoice_{invoice_id}")],
+                    [InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]
+                ])
+                
+                msg = (
+                    f"🪙 <b>Crypto Payment (USDT BEP20)</b>\n\n"
+                    f"Package: <b>{package_name}</b>\n"
+                    f"Amount Required: <code>{usdt_amount}</code> USDT\n\n"
+                    f"Send <b>exactly</b> {usdt_amount} USDT via the <b>Binance Smart Chain (BEP20)</b> network to the address below:\n\n"
+                    f"<code>{temp_address}</code>\n\n"
+                    f"<i>Note: The system will automatically detect the payment and send you a claim button here. This may take a few minutes.</i>"
+                )
+                await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
+            else:
+                await callback.message.edit_text("❌ Failed to generate crypto invoice. Please try again later or use a different payment method.")
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("cancelinvoice_"))
+async def process_cancelinvoice_callback(callback: CallbackQuery):
+    if await is_banned(callback.from_user.id):
+        await callback.answer("You are banned.", show_alert=True)
+        return
+        
+    invoice_id = callback.data.split("_")[1]
+    
+    headers = {"x-api-key": config.BSC_API_KEY}
+    async with aiohttp.ClientSession() as session:
+        async with session.post(f"https://bscusdtapi.onrender.com/api/invoices/{invoice_id}/cancel", headers=headers) as resp:
+            if resp.status in [200, 400, 404]:
+                update_crypto_invoice_status(invoice_id, "canceled")
+                await callback.message.edit_text("❌ Invoice canceled successfully.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]]))
+            else:
+                await callback.answer("Failed to cancel invoice on gateway. Try again.", show_alert=True)
+    await callback.answer()
+
+@router.callback_query(F.data.startswith("claimcrypto_"))
+async def process_claimcrypto_callback(callback: CallbackQuery):
+    if await is_banned(callback.from_user.id):
+        await callback.answer("You are banned.", show_alert=True)
+        return
+
+    user_id = callback.from_user.id
+    parts = callback.data.split("_")
+    item_type = parts[1]
+    
+    package_name = ""
+    stars_amount = 0
+    if item_type == "gems":
+        gems_amount = int(parts[2])
+        stars_amount = int(parts[3])
+        package_name = f"{gems_amount} Gems"
+    elif item_type == "premium":
+        duration_days = int(parts[2])
+        stars_amount = int(parts[3])
+        package_name = f"{duration_days} Days Premium"
+    elif item_type == "groupsub":
+        chat_id = int(parts[2])
+        duration_days = int(parts[3])
+        stars_amount = int(parts[4])
+        package_name = f"Group Access {duration_days} Days"
+        
+    pending_invoices = get_pending_crypto_invoices(user_id, package_name)
+    if not pending_invoices:
+        await callback.answer("No pending invoices found for this package.", show_alert=True)
+        return
+        
+    invoice_id = pending_invoices[0]["invoice_id"]
+    
+    await callback.message.edit_text("⏳ Verifying your payment...")
+    
+    headers = {"x-api-key": config.BSC_API_KEY}
+    async with aiohttp.ClientSession() as session:
+        async with session.post("https://bscusdtapi.onrender.com/api/claims", json={"invoiceId": invoice_id}, headers=headers) as resp:
+            data = await resp.json()
+            if resp.status == 200 and data.get("claimed"):
+                update_crypto_invoice_status(invoice_id, "claimed")
+                
+                payment_id = shortuuid.uuid()
+                username = callback.from_user.username or str(user_id)
+                
+                if item_type == "gems":
+                    await save_gem_payment(payment_id, user_id, username, package_name, gems_amount, stars_amount)
+                    log_local_payment(user_id, payment_id, package_name)
+                    start_payload = f"gems_{payment_id}"
+                    
+                    target_bot = config.TARGET_BOT_USERNAME
+                    deep_link = f"https://t.me/{target_bot}?start={start_payload}"
+                    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link)]])
+                    success_msg = f"✅ Payment successful!\n\nItem: {package_name}\nPayment ID: `{payment_id}`\n\nClick the button below to verify and claim your reward in the Promotion Bot."
+                elif item_type == "premium":
+                    await save_premium_payment(payment_id, user_id, username, package_name, duration_days, stars_amount)
+                    log_local_payment(user_id, payment_id, package_name)
+                    start_payload = f"premium_{payment_id}"
+                    
+                    target_bot = config.TARGET_BOT_USERNAME
+                    deep_link = f"https://t.me/{target_bot}?start={start_payload}"
+                    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link)]])
+                    success_msg = f"✅ Payment successful!\n\nItem: {package_name}\nPayment ID: `{payment_id}`\n\nClick the button below to verify and claim your reward in the Promotion Bot."
+                elif item_type == "groupsub":
+                    extend_group_subscription(user_id, chat_id, duration_days)
+                    log_local_payment(user_id, payment_id, package_name)
+                    markup = None
+                    success_msg = f"✅ Payment successful!\n\nItem: {package_name}\nPayment ID: `{payment_id}`\n\nYour group subscription is now active! You can now send messages in the group."
+
+                if markup:
+                    await callback.message.edit_text(success_msg, reply_markup=markup, parse_mode="Markdown")
+                else:
+                    await callback.message.edit_text(success_msg, parse_mode="Markdown")
+                    
+                try:
+                    admin_msg = (
+                        f"🔔 <b>New Crypto Payment Received!</b>\n\n"
+                        f"👤 User: <a href='tg://user?id={user_id}'>{callback.from_user.first_name}</a> (ID: <code>{user_id}</code>)\n"
+                        f"🛍 Item: <b>{package_name}</b>\n"
+                        f"🧾 Payment ID: <code>{payment_id}</code>"
+                    )
+                    await callback.bot.send_message(config.ADMIN_ID, admin_msg, parse_mode="HTML")
+                except Exception:
+                    pass
+            else:
+                await callback.message.edit_text("❌ Payment not verified. If you have just paid, please wait a few more minutes and click the claim button again.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Try Again", callback_data=callback.data)], [InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]]))
+    await callback.answer()
+
 @router.callback_query(F.data.startswith("payother_"))
 async def process_payother_callback(callback: CallbackQuery):
     if await is_banned(callback.from_user.id):
@@ -93,7 +299,6 @@ async def process_payother_callback(callback: CallbackQuery):
     item_type = parts[1]
     amount = parts[2]
     
-    # Generate link to chosentwo_bot
     deep_link = f"https://t.me/chosentwo_bot?start={item_type}_{amount}"
     
     markup = InlineKeyboardMarkup(inline_keyboard=[
@@ -103,8 +308,8 @@ async def process_payother_callback(callback: CallbackQuery):
     
     msg = (
         "💳 <b>Other Payment Methods</b>\n\n"
-        "We accept <b>INR (UPI)</b> and <b>Crypto</b> payments.\n\n"
-        "Please click the button below to contact our support bot to process your payment manually."
+        "We accept <b>INR (UPI)</b> payments manually.\n\n"
+        "Please click the button below to contact our support bot to process your payment."
     )
     
     await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")

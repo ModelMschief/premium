@@ -29,6 +29,16 @@ def init_db():
             last_warning_message_id INTEGER
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS crypto_invoices (
+            invoice_id TEXT PRIMARY KEY,
+            user_id INTEGER,
+            package_name TEXT,
+            temp_address TEXT,
+            status TEXT,
+            timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     conn.commit()
     conn.close()
 
@@ -107,3 +117,31 @@ def set_last_warning(chat_id: int, message_id: int):
 
 # Initialize DB when module is imported
 init_db()
+
+def add_crypto_invoice(invoice_id: str, user_id: int, package_name: str, temp_address: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO crypto_invoices (invoice_id, user_id, package_name, temp_address, status)
+        VALUES (?, ?, ?, ?, 'pending')
+    ''', (invoice_id, user_id, package_name, temp_address))
+    conn.commit()
+    conn.close()
+
+def get_pending_crypto_invoices(user_id: int, package_name: str = None):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    if package_name:
+        cursor.execute('SELECT invoice_id, package_name, temp_address FROM crypto_invoices WHERE user_id = ? AND status = ? AND package_name = ?', (user_id, 'pending', package_name))
+    else:
+        cursor.execute('SELECT invoice_id, package_name, temp_address FROM crypto_invoices WHERE user_id = ? AND status = ?', (user_id, 'pending'))
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"invoice_id": row[0], "package_name": row[1], "temp_address": row[2]} for row in rows]
+
+def update_crypto_invoice_status(invoice_id: str, status: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE crypto_invoices SET status = ? WHERE invoice_id = ?', (status, invoice_id))
+    conn.commit()
+    conn.close()

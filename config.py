@@ -7,6 +7,8 @@ BOT_TOKEN = os.getenv("BOT_TOKEN")
 MONGO_URI = os.getenv("MONGO_URI")
 TARGET_BOT_USERNAME = os.getenv("TARGET_BOT_USERNAME", "anoni67_bot")
 ADMIN_ID = 1928631932 # Admin ID to notify on successful payments
+BSC_API_KEY = os.getenv("BSC_API_KEY")
+BSC_RECEIVING_ADDRESS = os.getenv("BSC_RECEIVING_ADDRESS")
 
 # Pricing Configuration
 GEMS_PACKAGES = [
