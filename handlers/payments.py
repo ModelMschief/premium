@@ -161,30 +161,40 @@ async def process_paycrypto_callback(callback: CallbackQuery):
     await callback.message.edit_text("⏳ Generating crypto invoice... Please wait.")
     
     async with aiohttp.ClientSession() as session:
-        async with session.post("https://bscusdtapi.onrender.com/api/invoices", json=payload, headers=headers) as resp:
-            if resp.status == 200:
-                data = await resp.json()
-                invoice_id = data["invoice"]["invoiceId"]
-                temp_address = data["tempWallet"]["address"]
-                
-                add_crypto_invoice(invoice_id, user_id, package_name, temp_address)
-                
-                markup = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelinvoice_{invoice_id}")],
-                    [InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]
-                ])
-                
-                msg = (
-                    f"🪙 <b>Crypto Payment (USDT BEP20)</b>\n\n"
-                    f"Package: <b>{package_name}</b>\n"
-                    f"Amount Required: <code>{usdt_amount}</code> USDT\n\n"
-                    f"Send <b>exactly</b> {usdt_amount} USDT via the <b>Binance Smart Chain (BEP20)</b> network to the address below:\n\n"
-                    f"<code>{temp_address}</code>\n\n"
-                    f"<i>Note: The system will automatically detect the payment and send you a claim button here. This may take a few minutes.</i>"
-                )
-                await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
-            else:
-                await callback.message.edit_text("❌ Failed to generate crypto invoice. Please try again later or use a different payment method.")
+        try:
+            print(f"[DEBUG] Sending payload to BSC API: {payload}")
+            print(f"[DEBUG] Headers: {headers}")
+            async with session.post("https://bscusdtapi.onrender.com/api/invoices", json=payload, headers=headers) as resp:
+                print(f"[DEBUG] API Response Status: {resp.status}")
+                if resp.status == 200:
+                    data = await resp.json()
+                    print(f"[DEBUG] API Response Data: {data}")
+                    invoice_id = data["invoice"]["invoiceId"]
+                    temp_address = data["tempWallet"]["address"]
+                    
+                    add_crypto_invoice(invoice_id, user_id, package_name, temp_address)
+                    
+                    markup = InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelinvoice_{invoice_id}")],
+                        [InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]
+                    ])
+                    
+                    msg = (
+                        f"🪙 <b>Crypto Payment (USDT BEP20)</b>\n\n"
+                        f"Package: <b>{package_name}</b>\n"
+                        f"Amount Required: <code>{usdt_amount}</code> USDT\n\n"
+                        f"Send <b>exactly</b> {usdt_amount} USDT via the <b>Binance Smart Chain (BEP20)</b> network to the address below:\n\n"
+                        f"<code>{temp_address}</code>\n\n"
+                        f"<i>Note: The system will automatically detect the payment and send you a claim button here. This may take a few minutes.</i>"
+                    )
+                    await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
+                else:
+                    error_data = await resp.text()
+                    print(f"[ERROR] API Request Failed: Status {resp.status}, Response: {error_data}")
+                    await callback.message.edit_text("❌ Failed to generate crypto invoice. Please try again later or use a different payment method.")
+        except Exception as e:
+            print(f"[ERROR] Exception during BSC API call: {e}")
+            await callback.message.edit_text("❌ Failed to generate crypto invoice. Please try again later or use a different payment method.")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("cancelinvoice_"))
