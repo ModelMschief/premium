@@ -31,15 +31,30 @@ async def process_buy_callback(callback: CallbackQuery):
         callback_paystars = f"paystars_{item_type}_{amount}_{stars}"
         callback_paycrypto = f"paycrypto_{item_type}_{amount}_{stars}"
         callback_payother = f"payother_{item_type}_{amount}_{stars}"
+        
+    usdt_amount = 0
+    if item_type == "gems":
+        for pkg in config.GEMS_PACKAGES:
+            if pkg["gems"] == int(amount): usdt_amount = pkg.get("USDT", 0)
+    elif item_type == "premium":
+        for pkg in config.PREMIUM_PACKAGES:
+            if pkg["duration_days"] == int(amount): usdt_amount = pkg.get("USDT", 0)
+            
+    if usdt_amount <= 0:
+        usdt_amount = round(int(stars) * 0.02, 2)
     
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="⭐️ Stars (Instant)", callback_data=callback_paystars,style="primary")],
-        [InlineKeyboardButton(text="🪙 Crypto (USDT)", callback_data=callback_paycrypto,style="primary")],
-        [InlineKeyboardButton(text="💳 INR (UPI)", callback_data=callback_payother,style="primary")],
+        [InlineKeyboardButton(text=f"⭐️ Pay {stars} Stars (Instant)", callback_data=callback_paystars,style="primary")],
+        [InlineKeyboardButton(text=f"🪙 Pay {usdt_amount} USDT", callback_data=callback_paycrypto,style="primary")],
+        [InlineKeyboardButton(text="💳 Pay with INR (UPI)", callback_data=callback_payother,style="primary")],
         [InlineKeyboardButton(text="🔙 Cancel", callback_data="main_menu")]
     ])
     
-    await callback.message.edit_text("<b>🥇How would you like to pay?</b>\n\n<i>✨Direct payment with Telegram Stars or automated Crypto (USDT BEP20)</i>", reply_markup=markup, parse_mode="HTML")
+    await callback.message.edit_text(
+        f"<b>🥇 Payment Selection</b>\n\n"
+        f"<i>Please choose your preferred payment method below to complete the purchase.</i>", 
+        reply_markup=markup, parse_mode="HTML"
+    )
     await callback.answer()
 
 @router.callback_query(F.data.startswith("paystars_"))
