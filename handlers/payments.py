@@ -166,7 +166,7 @@ async def process_paycrypto_callback(callback: CallbackQuery):
             print(f"[DEBUG] Headers: {headers}")
             async with session.post("https://bscusdtapi.onrender.com/api/invoices", json=payload, headers=headers) as resp:
                 print(f"[DEBUG] API Response Status: {resp.status}")
-                if resp.status == 200:
+                if resp.status in [200, 201]:
                     data = await resp.json()
                     print(f"[DEBUG] API Response Data: {data}")
                     invoice_id = data["invoice"]["invoiceId"]
@@ -208,7 +208,7 @@ async def process_cancelinvoice_callback(callback: CallbackQuery):
     headers = {"x-api-key": config.BSC_API_KEY}
     async with aiohttp.ClientSession() as session:
         async with session.post(f"https://bscusdtapi.onrender.com/api/invoices/{invoice_id}/cancel", headers=headers) as resp:
-            if resp.status in [200, 400, 404]:
+            if resp.status in [200, 201, 400, 404]:
                 update_crypto_invoice_status(invoice_id, "canceled")
                 await callback.message.edit_text("❌ Invoice canceled successfully.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]]))
             else:
@@ -254,7 +254,7 @@ async def process_claimcrypto_callback(callback: CallbackQuery):
     async with aiohttp.ClientSession() as session:
         async with session.post("https://bscusdtapi.onrender.com/api/claims", json={"invoiceId": invoice_id}, headers=headers) as resp:
             data = await resp.json()
-            if resp.status == 200 and data.get("claimed"):
+            if resp.status in [200, 201] and data.get("claimed"):
                 update_crypto_invoice_status(invoice_id, "claimed")
                 
                 payment_id = shortuuid.uuid()
