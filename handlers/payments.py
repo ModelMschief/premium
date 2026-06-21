@@ -158,7 +158,7 @@ async def process_paycrypto_callback(callback: CallbackQuery):
     if len(pending_invoices) >= 3:
         buttons = []
         for inv in pending_invoices:
-            buttons.append([InlineKeyboardButton(text=f"❌ Cancel {inv['package_name']} ({inv['invoice_id'][:8]})", callback_data=f"cancelinvoice_{inv['invoice_id']}", style="primary")])
+            buttons.append([InlineKeyboardButton(text=f"❌ Cancel {inv['package_name']} ({inv['invoice_id'][:8]})", callback_data=f"cancelinvoice_{inv['invoice_id']}", style="danger")])
         buttons.append([InlineKeyboardButton(text="🔙 Cancel", callback_data="main_menu")])
         markup = InlineKeyboardMarkup(inline_keyboard=buttons)
         msg_html = (
@@ -188,7 +188,7 @@ async def process_paycrypto_callback(callback: CallbackQuery):
     
     headers = {"x-api-key": config.BSC_API_KEY}
     
-    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>⏳ Generating crypto invoice... Please wait.</p>")
+    await callback.message.edit_text("⏳ Generating crypto invoice... Please wait.")
     
     async with aiohttp.ClientSession() as session:
         try:
@@ -205,7 +205,7 @@ async def process_paycrypto_callback(callback: CallbackQuery):
                     add_crypto_invoice(invoice_id, user_id, package_name, temp_address)
                     
                     markup = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelinvoice_{invoice_id}", style="primary")],
+                        [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelinvoice_{invoice_id}", style="danger")],
                         [InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]
                     ])
                     
@@ -290,7 +290,7 @@ async def process_claimcrypto_callback(callback: CallbackQuery):
         
     invoice_id = pending_invoices[0]["invoice_id"]
     
-    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>⏳ Verifying your payment...</p>")
+    await callback.message.edit_text("⏳ Verifying your payment...")
     
     headers = {"x-api-key": config.BSC_API_KEY}
     async with aiohttp.ClientSession() as session:

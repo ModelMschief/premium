@@ -186,7 +186,7 @@ async def clone_pay_crypto(callback: CallbackQuery):
             [InlineKeyboardButton(
                 text=f"❌ Cancel Pending: {pending['package_name']}",
                 callback_data=f"cancelcloneinvoice_{pending['invoice_id']}",
-                style="primary"
+                style="danger"
             )],
             [InlineKeyboardButton(text="🔙 Back", callback_data=f"clonesub_{group_id}")]
         ])
@@ -219,7 +219,7 @@ async def clone_pay_crypto(callback: CallbackQuery):
 
     headers = {"x-api-key": config.BSC_API_KEY}
 
-    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>⏳ Generating crypto invoice... Please wait.</p>")
+    await callback.message.edit_text("⏳ Generating crypto invoice... Please wait.")
 
     async with aiohttp.ClientSession() as session:
         try:
@@ -233,7 +233,7 @@ async def clone_pay_crypto(callback: CallbackQuery):
                     add_clone_crypto_invoice(invoice_id, user_id, bot_id, group_id, package_name, usdt_amount, temp_address)
 
                     markup = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelcloneinvoice_{invoice_id}", style="primary")],
+                        [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelcloneinvoice_{invoice_id}", style="danger")],
                         [InlineKeyboardButton(text="🔙 Main Menu", callback_data="clone_main_menu")]
                     ])
 
@@ -298,7 +298,7 @@ async def claim_clone_subscription(callback: CallbackQuery):
     invoice_id = pending["invoice_id"]
     usdt_amount = pending["usdt_amount"]
 
-    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>⏳ Verifying your payment...</p>")
+    await callback.message.edit_text("⏳ Verifying your payment...")
 
     headers = {"x-api-key": config.BSC_API_KEY}
     async with aiohttp.ClientSession() as session:
