@@ -3,7 +3,8 @@ import logging
 import datetime
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
-from database.sqlite import get_connected_group, get_clone_subscription, get_cloned_bot_by_id
+from aiogram.filters import Command
+from database.sqlite import get_connected_group, get_clone_subscription, get_cloned_bot_by_id, add_connected_group
 import config
 
 logger = logging.getLogger(__name__)
@@ -16,6 +17,47 @@ def get_viral_button() -> list:
     if main_bot:
         return [InlineKeyboardButton(text="🤖 Get Your Own Premium Group Bot — FREE!", url=f"https://t.me/{main_bot}?start=clone")]
     return []
+
+
+@router.message(Command("connect"))
+async def connect_group_command(message: Message):
+    if message.chat.type not in {"group", "supergroup"}:
+        return
+
+    bot_info = await message.bot.get_me()
+    bot_id = bot_info.id
+    clone_data = get_cloned_bot_by_id(bot_id)
+
+    if not clone_data:
+        return
+
+    # Check if the sender is the owner of the bot
+    if message.from_user.id != clone_data["owner_user_id"]:
+        await message.reply("❌ Only the bot owner can connect this group.")
+        return
+
+    # Check if the bot is actually an admin in the group
+    try:
+        bot_member = await message.chat.get_member(bot_id)
+        if bot_member.status != "administrator":
+            await message.reply("❌ I must be an administrator in this group before you can connect it!")
+            return
+    except Exception as e:
+        logger.error(f"Could not get bot member status: {e}")
+        return
+
+    group_id = message.chat.id
+    group_title = message.chat.title or f"Group {group_id}"
+    owner_user_id = clone_data["owner_user_id"]
+
+    # Register the group
+    add_connected_group(group_id, group_title, bot_id, owner_user_id)
+
+    await message.reply(
+        f"✅ <b>Group Connected Successfully!</b>\n\n"
+        f"This group is now managed by the bot. You can configure subscription packages in your private dashboard.",
+        parse_mode="HTML"
+    )
 
 
 @router.message(F.chat.type.in_({"group", "supergroup"}))

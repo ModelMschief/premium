@@ -58,42 +58,13 @@ async def owner_connect_group(callback: CallbackQuery):
         f"3️⃣ Add @{bot_info.username} as an administrator\n"
         f"4️⃣ Grant these permissions:\n"
         "   • <i>Delete messages</i>\n"
-        "   • <i>Send messages</i>\n\n"
-        "✅ The group will be <b>automatically registered</b> once the bot is added as admin!",
+        "   • <i>Send messages</i>\n"
+        f"5️⃣ Send the command <code>/connect</code> inside the group!\n\n"
+        "✅ The bot will verify you are the owner and connect the group.",
         reply_markup=markup, parse_mode="HTML"
     )
     await callback.answer()
 
-
-# Auto-register group when bot is added as admin
-@router.my_chat_member(ChatMemberUpdatedFilter(member_status_changed=IS_NOT_MEMBER >> ADMINISTRATOR))
-async def bot_added_as_admin(event: ChatMemberUpdated):
-    bot_info = await event.bot.get_me()
-    bot_id = bot_info.id
-    clone_data = get_cloned_bot_by_id(bot_id)
-
-    if not clone_data:
-        return
-
-    group_id = event.chat.id
-    group_title = event.chat.title or f"Group {group_id}"
-    owner_user_id = clone_data["owner_user_id"]
-
-    add_connected_group(group_id, group_title, bot_id, owner_user_id)
-    logger.info(f"Group '{group_title}' ({group_id}) auto-registered for bot {bot_id}")
-
-    # Notify owner
-    try:
-        await event.bot.send_message(
-            owner_user_id,
-            f"✅ <b>Group Connected!</b>\n\n"
-            f"📢 <b>{group_title}</b>\n"
-            f"🆔 <code>{group_id}</code>\n\n"
-            f"Now go to <b>Manage Groups</b> in the dashboard to add subscription packages.",
-            parse_mode="HTML"
-        )
-    except Exception:
-        pass
 
 
 # Auto-unregister when bot is removed
