@@ -38,3 +38,10 @@ GROUP_SUB_PACKAGES = [
     {"name": "90 Days", "duration_days": 90, "stars": 450},
     {"name": "365 Days", "duration_days": 365, "stars": 1500},
 ]
+
+# ─── Multi-Tenant Clone Feature ───────────────────────────────
+PLATFORM_RECEIVING_ADDRESS = os.getenv("PLATFORM_RECEIVING_ADDRESS", "0x373A1C056a3EC15a40CFB88170Cf3C58bc0bf7B8")
+CLONE_SLOT_STARS_PRICE = 25      # Stars for +5 clone slots
+CLONE_SLOT_USDT_PRICE = 5        # USDT for +5 clone slots
+CREATOR_REVENUE_SHARE = 0.90     # 90% to creator, 10% to platform
+MAIN_BOT_USERNAME = os.getenv("MAIN_BOT_USERNAME", "")  # Filled dynamically on startup

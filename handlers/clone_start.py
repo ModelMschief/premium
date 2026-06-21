@@ -1,0 +1,223 @@
+from aiogram import Router, F
+from aiogram.filters import CommandStart, CommandObject
+from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from database.sqlite import (
+    get_cloned_bot_by_id, get_connected_groups, get_group_packages,
+    get_clone_subscription
+)
+import config
+import datetime
+
+router = Router()
+
+
+def get_viral_button() -> list:
+    """Returns the viral growth button that appears on every screen."""
+    main_bot = config.MAIN_BOT_USERNAME
+    if main_bot:
+        return [InlineKeyboardButton(text="🤖 Get Your Own Premium Group Bot — FREE!", url=f"https://t.me/{main_bot}?start=clone")]
+    return []
+
+
+@router.message(CommandStart())
+async def clone_cmd_start(message: Message, command: CommandObject):
+    bot_info = await message.bot.get_me()
+    bot_id = bot_info.id
+    clone_data = get_cloned_bot_by_id(bot_id)
+
+    if not clone_data:
+        await message.answer("⚠️ This bot is not configured properly.")
+        return
+
+    owner_user_id = clone_data["owner_user_id"]
+    user_id = message.from_user.id
+
+    # ─── Owner enters dashboard ──────────────────────────
+    if user_id == owner_user_id:
+        await show_owner_dashboard(message, bot_id, bot_info.username)
+        return
+
+    # ─── Handle /start sub_{group_id} ────────────────────
+    args = command.args
+    if args and args.startswith("sub_"):
+        try:
+            group_id = int(args.split("_")[1])
+        except (IndexError, ValueError):
+            await message.answer("Invalid subscription link.")
+            return
+
+        await show_group_subscription(message, group_id, bot_id, bot_info.username)
+        return
+
+    # ─── Regular user — show available groups ────────────
+    groups = get_connected_groups(bot_id)
+
+    if not groups:
+        viral = get_viral_button()
+        buttons = []
+        if viral:
+            buttons.append(viral)
+        markup = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
+        await message.answer(
+            "👋 <b>Welcome!</b>\n\n"
+            "This bot manages premium group subscriptions.\n"
+            "No groups are configured yet. Please check back later!",
+            reply_markup=markup, parse_mode="HTML"
+        )
+        return
+
+    buttons = []
+    for g in groups:
+        buttons.append([InlineKeyboardButton(
+            text=f"📢 {g['group_title']}",
+            callback_data=f"clonesub_{g['group_id']}"
+        )])
+
+    viral = get_viral_button()
+    if viral:
+        buttons.append(viral)
+
+    markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    await message.answer(
+        "👋 <b>Welcome!</b>\n\n"
+        "Select a group below to view subscription options and gain access to premium content.",
+        reply_markup=markup, parse_mode="HTML"
+    )
+
+
+async def show_owner_dashboard(message: Message, bot_id: int, bot_username: str):
+    """Show the owner's management dashboard."""
+    groups = get_connected_groups(bot_id)
+    group_count = len(groups)
+
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group")],
+        [InlineKeyboardButton(text=f"📋 Manage Groups ({group_count})", callback_data="owner_manage_groups")],
+        [InlineKeyboardButton(text="💰 Wallet & Withdrawals", callback_data="owner_wallet")],
+    ])
+
+    await message.answer(
+        f"🏠 <b>Owner Dashboard</b>\n\n"
+        f"🤖 Bot: @{bot_username}\n"
+        f"📢 Connected Groups: <b>{group_count}</b>\n\n"
+        f"Select an option below to manage your bot.",
+        reply_markup=markup, parse_mode="HTML"
+    )
+
+
+async def show_group_subscription(message_or_callback, group_id: int, bot_id: int, bot_username: str):
+    """Show subscription packages for a specific group to a regular user."""
+    packages = get_group_packages(group_id)
+
+    if not packages:
+        viral = get_viral_button()
+        buttons = [[InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")]]
+        if viral:
+            buttons.append(viral)
+        markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+        text = (
+            "📦 <b>No Packages Available</b>\n\n"
+            "The group owner hasn't configured any subscription packages yet."
+        )
+        if isinstance(message_or_callback, Message):
+            await message_or_callback.answer(text, reply_markup=markup, parse_mode="HTML")
+        else:
+            await message_or_callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+        return
+
+    # Check current subscription
+    user_id = message_or_callback.from_user.id
+    sub_expiry = get_clone_subscription(user_id, group_id)
+    sub_status = ""
+    if sub_expiry:
+        expiry_dt = datetime.datetime.fromisoformat(sub_expiry)
+        now = datetime.datetime.now(datetime.timezone.utc)
+        if expiry_dt > now:
+            remaining = (expiry_dt - now).days
+            sub_status = f"\n✅ <b>Active subscription:</b> {remaining} days remaining\n"
+        else:
+            sub_status = "\n⚠️ <b>Subscription expired.</b> Renew below!\n"
+
+    buttons = []
+    for pkg in packages:
+        buttons.append([InlineKeyboardButton(
+            text=f"💎 {pkg['duration_days']} Days | ⭐️ {pkg['stars_price']} | 🪙 {pkg['usdt_price']} USDT",
+            callback_data=f"clonebuy_{group_id}_{pkg['package_id']}"
+        )])
+
+    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")])
+    viral = get_viral_button()
+    if viral:
+        buttons.append(viral)
+
+    markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    text = (
+        f"📦 <b>Subscription Packages</b>\n"
+        f"{sub_status}\n"
+        f"Select a package to purchase access:"
+    )
+
+    if isinstance(message_or_callback, Message):
+        await message_or_callback.answer(text, reply_markup=markup, parse_mode="HTML")
+    else:
+        await message_or_callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+
+
+# ─── Callback: View group subscription packages ─────────────
+@router.callback_query(F.data.startswith("clonesub_"))
+async def view_group_sub(callback: CallbackQuery):
+    group_id = int(callback.data.split("_")[1])
+    bot_info = await callback.bot.get_me()
+    await show_group_subscription(callback, group_id, bot_info.id, bot_info.username)
+    await callback.answer()
+
+
+# ─── Callback: Back to clone main menu ───────────────────────
+@router.callback_query(F.data == "clone_main_menu")
+async def clone_main_menu(callback: CallbackQuery):
+    bot_info = await callback.bot.get_me()
+    bot_id = bot_info.id
+    clone_data = get_cloned_bot_by_id(bot_id)
+
+    if not clone_data:
+        await callback.answer("Bot not configured.", show_alert=True)
+        return
+
+    # Check if owner
+    if callback.from_user.id == clone_data["owner_user_id"]:
+        groups = get_connected_groups(bot_id)
+        group_count = len(groups)
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group")],
+            [InlineKeyboardButton(text=f"📋 Manage Groups ({group_count})", callback_data="owner_manage_groups")],
+            [InlineKeyboardButton(text="💰 Wallet & Withdrawals", callback_data="owner_wallet")],
+        ])
+        await callback.message.edit_text(
+            f"🏠 <b>Owner Dashboard</b>\n\n"
+            f"🤖 Bot: @{bot_info.username}\n"
+            f"📢 Connected Groups: <b>{group_count}</b>\n\n"
+            f"Select an option below to manage your bot.",
+            reply_markup=markup, parse_mode="HTML"
+        )
+    else:
+        groups = get_connected_groups(bot_id)
+        buttons = []
+        for g in groups:
+            buttons.append([InlineKeyboardButton(
+                text=f"📢 {g['group_title']}",
+                callback_data=f"clonesub_{g['group_id']}"
+            )])
+        viral = get_viral_button()
+        if viral:
+            buttons.append(viral)
+        markup = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
+
+        await callback.message.edit_text(
+            "👋 <b>Welcome!</b>\n\n"
+            "Select a group below to view subscription options.",
+            reply_markup=markup, parse_mode="HTML"
+        )
+    await callback.answer()

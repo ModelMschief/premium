@@ -39,6 +39,84 @@ def init_db():
             timestamp DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    # ─── Multi-Tenant Clone Tables ─────────────────────────────
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS cloned_bots (
+            bot_id INTEGER PRIMARY KEY,
+            owner_user_id INTEGER NOT NULL,
+            bot_username TEXT,
+            bot_token TEXT UNIQUE NOT NULL,
+            clone_status TEXT DEFAULT 'active',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clone_quotas (
+            user_id INTEGER PRIMARY KEY,
+            total_slots INTEGER DEFAULT 1,
+            used_slots INTEGER DEFAULT 0
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS connected_groups (
+            group_id INTEGER PRIMARY KEY,
+            group_title TEXT,
+            bot_id INTEGER NOT NULL,
+            owner_user_id INTEGER NOT NULL,
+            connected_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS group_packages (
+            package_id INTEGER PRIMARY KEY AUTOINCREMENT,
+            group_id INTEGER NOT NULL,
+            duration_days INTEGER NOT NULL,
+            stars_price INTEGER NOT NULL,
+            usdt_price REAL NOT NULL
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS creator_balances (
+            owner_user_id INTEGER PRIMARY KEY,
+            balance_usdt REAL DEFAULT 0.0,
+            total_earned_usdt REAL DEFAULT 0.0,
+            withdrawal_address TEXT
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS withdrawals (
+            withdrawal_id TEXT PRIMARY KEY,
+            owner_user_id INTEGER NOT NULL,
+            amount REAL NOT NULL,
+            to_address TEXT NOT NULL,
+            status TEXT DEFAULT 'pending',
+            tx_hash TEXT,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            completed_at DATETIME
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clone_subscriptions (
+            user_id INTEGER,
+            group_id INTEGER,
+            bot_id INTEGER,
+            expiry_date DATETIME,
+            PRIMARY KEY (user_id, group_id)
+        )
+    ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clone_crypto_invoices (
+            invoice_id TEXT PRIMARY KEY,
+            user_id INTEGER NOT NULL,
+            bot_id INTEGER NOT NULL,
+            group_id INTEGER,
+            package_name TEXT,
+            usdt_amount REAL,
+            temp_address TEXT,
+            status TEXT DEFAULT 'pending',
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP
+        )
+    ''')
     conn.commit()
     conn.close()
 
@@ -143,5 +221,307 @@ def update_crypto_invoice_status(invoice_id: str, status: str):
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
     cursor.execute('UPDATE crypto_invoices SET status = ? WHERE invoice_id = ?', (status, invoice_id))
+    conn.commit()
+    conn.close()
+
+
+# ═══════════════════════════════════════════════════════════════
+# Multi-Tenant Clone Feature — Helper Functions
+# ═══════════════════════════════════════════════════════════════
+
+import datetime
+
+# ─── Cloned Bots ──────────────────────────────────────────────
+
+def add_cloned_bot(bot_id: int, owner_user_id: int, bot_username: str, bot_token: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO cloned_bots (bot_id, owner_user_id, bot_username, bot_token)
+        VALUES (?, ?, ?, ?)
+    ''', (bot_id, owner_user_id, bot_username, bot_token))
+    conn.commit()
+    conn.close()
+
+def get_all_active_cloned_bots():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT bot_id, owner_user_id, bot_username, bot_token FROM cloned_bots WHERE clone_status = ?', ('active',))
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"bot_id": r[0], "owner_user_id": r[1], "bot_username": r[2], "bot_token": r[3]} for r in rows]
+
+def get_cloned_bot_by_id(bot_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT bot_id, owner_user_id, bot_username, bot_token, clone_status FROM cloned_bots WHERE bot_id = ?', (bot_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"bot_id": row[0], "owner_user_id": row[1], "bot_username": row[2], "bot_token": row[3], "clone_status": row[4]}
+    return None
+
+def get_cloned_bots_by_owner(owner_user_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT bot_id, bot_username, clone_status FROM cloned_bots WHERE owner_user_id = ?', (owner_user_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"bot_id": r[0], "bot_username": r[1], "clone_status": r[2]} for r in rows]
+
+def remove_cloned_bot(bot_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE cloned_bots SET clone_status = ? WHERE bot_id = ?', ('stopped', bot_id))
+    conn.commit()
+    conn.close()
+
+# ─── Clone Quotas ─────────────────────────────────────────────
+
+def get_clone_quota(user_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT total_slots, used_slots FROM clone_quotas WHERE user_id = ?', (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"total_slots": row[0], "used_slots": row[1]}
+    return {"total_slots": 1, "used_slots": 0}
+
+def increment_used_slots(user_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT user_id FROM clone_quotas WHERE user_id = ?', (user_id,))
+    if cursor.fetchone():
+        cursor.execute('UPDATE clone_quotas SET used_slots = used_slots + 1 WHERE user_id = ?', (user_id,))
+    else:
+        cursor.execute('INSERT INTO clone_quotas (user_id, total_slots, used_slots) VALUES (?, 1, 1)', (user_id,))
+    conn.commit()
+    conn.close()
+
+def add_clone_slots(user_id: int, slots: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT user_id FROM clone_quotas WHERE user_id = ?', (user_id,))
+    if cursor.fetchone():
+        cursor.execute('UPDATE clone_quotas SET total_slots = total_slots + ? WHERE user_id = ?', (slots, user_id))
+    else:
+        cursor.execute('INSERT INTO clone_quotas (user_id, total_slots, used_slots) VALUES (?, ?, 0)', (user_id, 1 + slots))
+    conn.commit()
+    conn.close()
+
+# ─── Connected Groups ────────────────────────────────────────
+
+def add_connected_group(group_id: int, group_title: str, bot_id: int, owner_user_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO connected_groups (group_id, group_title, bot_id, owner_user_id)
+        VALUES (?, ?, ?, ?)
+        ON CONFLICT(group_id) DO UPDATE SET group_title = excluded.group_title, bot_id = excluded.bot_id, owner_user_id = excluded.owner_user_id
+    ''', (group_id, group_title, bot_id, owner_user_id))
+    conn.commit()
+    conn.close()
+
+def get_connected_groups(bot_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT group_id, group_title FROM connected_groups WHERE bot_id = ?', (bot_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"group_id": r[0], "group_title": r[1]} for r in rows]
+
+def get_connected_group(group_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT group_id, group_title, bot_id, owner_user_id FROM connected_groups WHERE group_id = ?', (group_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"group_id": row[0], "group_title": row[1], "bot_id": row[2], "owner_user_id": row[3]}
+    return None
+
+def remove_connected_group(group_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM connected_groups WHERE group_id = ?', (group_id,))
+    conn.commit()
+    conn.close()
+
+# ─── Group Packages ──────────────────────────────────────────
+
+def add_group_package(group_id: int, duration_days: int, stars_price: int, usdt_price: float):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO group_packages (group_id, duration_days, stars_price, usdt_price)
+        VALUES (?, ?, ?, ?)
+    ''', (group_id, duration_days, stars_price, usdt_price))
+    conn.commit()
+    conn.close()
+
+def get_group_packages(group_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT package_id, duration_days, stars_price, usdt_price FROM group_packages WHERE group_id = ? ORDER BY duration_days ASC', (group_id,))
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"package_id": r[0], "duration_days": r[1], "stars_price": r[2], "usdt_price": r[3]} for r in rows]
+
+def get_group_package_by_id(package_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT package_id, group_id, duration_days, stars_price, usdt_price FROM group_packages WHERE package_id = ?', (package_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"package_id": row[0], "group_id": row[1], "duration_days": row[2], "stars_price": row[3], "usdt_price": row[4]}
+    return None
+
+def update_group_package(package_id: int, duration_days: int, stars_price: int, usdt_price: float):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE group_packages SET duration_days = ?, stars_price = ?, usdt_price = ? WHERE package_id = ?', (duration_days, stars_price, usdt_price, package_id))
+    conn.commit()
+    conn.close()
+
+def delete_group_package(package_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('DELETE FROM group_packages WHERE package_id = ?', (package_id,))
+    conn.commit()
+    conn.close()
+
+# ─── Creator Balances ────────────────────────────────────────
+
+def get_creator_balance(owner_user_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT balance_usdt, total_earned_usdt, withdrawal_address FROM creator_balances WHERE owner_user_id = ?', (owner_user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"balance_usdt": row[0], "total_earned_usdt": row[1], "withdrawal_address": row[2]}
+    return {"balance_usdt": 0.0, "total_earned_usdt": 0.0, "withdrawal_address": None}
+
+def credit_creator_balance(owner_user_id: int, amount: float):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT owner_user_id FROM creator_balances WHERE owner_user_id = ?', (owner_user_id,))
+    if cursor.fetchone():
+        cursor.execute('UPDATE creator_balances SET balance_usdt = balance_usdt + ?, total_earned_usdt = total_earned_usdt + ? WHERE owner_user_id = ?', (amount, amount, owner_user_id))
+    else:
+        cursor.execute('INSERT INTO creator_balances (owner_user_id, balance_usdt, total_earned_usdt) VALUES (?, ?, ?)', (owner_user_id, amount, amount))
+    conn.commit()
+    conn.close()
+
+def debit_creator_balance(owner_user_id: int, amount: float):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE creator_balances SET balance_usdt = balance_usdt - ? WHERE owner_user_id = ?', (amount, owner_user_id))
+    conn.commit()
+    conn.close()
+
+def set_withdrawal_address(owner_user_id: int, address: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT owner_user_id FROM creator_balances WHERE owner_user_id = ?', (owner_user_id,))
+    if cursor.fetchone():
+        cursor.execute('UPDATE creator_balances SET withdrawal_address = ? WHERE owner_user_id = ?', (address, owner_user_id))
+    else:
+        cursor.execute('INSERT INTO creator_balances (owner_user_id, withdrawal_address) VALUES (?, ?)', (owner_user_id, address))
+    conn.commit()
+    conn.close()
+
+# ─── Withdrawals ─────────────────────────────────────────────
+
+def create_withdrawal(withdrawal_id: str, owner_user_id: int, amount: float, to_address: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO withdrawals (withdrawal_id, owner_user_id, amount, to_address)
+        VALUES (?, ?, ?, ?)
+    ''', (withdrawal_id, owner_user_id, amount, to_address))
+    conn.commit()
+    conn.close()
+
+def complete_withdrawal(withdrawal_id: str, tx_hash: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    now = datetime.datetime.now(datetime.timezone.utc).isoformat()
+    cursor.execute('UPDATE withdrawals SET status = ?, tx_hash = ?, completed_at = ? WHERE withdrawal_id = ?', ('completed', tx_hash, now, withdrawal_id))
+    conn.commit()
+    conn.close()
+
+def fail_withdrawal(withdrawal_id: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE withdrawals SET status = ? WHERE withdrawal_id = ?', ('failed', withdrawal_id))
+    conn.commit()
+    conn.close()
+
+# ─── Clone Subscriptions ─────────────────────────────────────
+
+def get_clone_subscription(user_id: int, group_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT expiry_date FROM clone_subscriptions WHERE user_id = ? AND group_id = ?', (user_id, group_id))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None
+
+def extend_clone_subscription(user_id: int, group_id: int, bot_id: int, duration_days: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT expiry_date FROM clone_subscriptions WHERE user_id = ? AND group_id = ?', (user_id, group_id))
+    row = cursor.fetchone()
+    
+    now = datetime.datetime.now(datetime.timezone.utc)
+    
+    if row:
+        current_expiry = datetime.datetime.fromisoformat(row[0])
+        if current_expiry < now:
+            new_expiry = now + datetime.timedelta(days=duration_days)
+        else:
+            new_expiry = current_expiry + datetime.timedelta(days=duration_days)
+        cursor.execute('UPDATE clone_subscriptions SET expiry_date = ? WHERE user_id = ? AND group_id = ?', (new_expiry.isoformat(), user_id, group_id))
+    else:
+        new_expiry = now + datetime.timedelta(days=duration_days)
+        cursor.execute('INSERT INTO clone_subscriptions (user_id, group_id, bot_id, expiry_date) VALUES (?, ?, ?, ?)', (user_id, group_id, bot_id, new_expiry.isoformat()))
+    
+    conn.commit()
+    conn.close()
+
+# ─── Clone Crypto Invoices ───────────────────────────────────
+
+def add_clone_crypto_invoice(invoice_id: str, user_id: int, bot_id: int, group_id: int, package_name: str, usdt_amount: float, temp_address: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO clone_crypto_invoices (invoice_id, user_id, bot_id, group_id, package_name, usdt_amount, temp_address, status)
+        VALUES (?, ?, ?, ?, ?, ?, ?, 'pending')
+    ''', (invoice_id, user_id, bot_id, group_id, package_name, usdt_amount, temp_address))
+    conn.commit()
+    conn.close()
+
+def get_pending_clone_invoice(user_id: int, bot_id: int = None):
+    """Get the single pending clone invoice for a user (1-invoice limit)."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    if bot_id:
+        cursor.execute('SELECT invoice_id, group_id, package_name, usdt_amount, temp_address FROM clone_crypto_invoices WHERE user_id = ? AND bot_id = ? AND status = ?', (user_id, bot_id, 'pending'))
+    else:
+        cursor.execute('SELECT invoice_id, group_id, package_name, usdt_amount, temp_address FROM clone_crypto_invoices WHERE user_id = ? AND status = ?', (user_id, 'pending'))
+    row = cursor.fetchone()
+    conn.close()
+    if row:
+        return {"invoice_id": row[0], "group_id": row[1], "package_name": row[2], "usdt_amount": row[3], "temp_address": row[4]}
+    return None
+
+def update_clone_invoice_status(invoice_id: str, status: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('UPDATE clone_crypto_invoices SET status = ? WHERE invoice_id = ?', (status, invoice_id))
     conn.commit()
     conn.close()

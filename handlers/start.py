@@ -25,7 +25,8 @@ def get_main_keyboard() -> InlineKeyboardMarkup:
     return InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(text="💎 Buy Gems", callback_data="show_gems", style="primary")],
         [InlineKeyboardButton(text="👑 Buy Premium", callback_data="show_premium", style="primary")],
-        [InlineKeyboardButton(text="💬 Buy Group Subscription", callback_data="show_groupsub_list", style="primary")]
+        [InlineKeyboardButton(text="💬 Buy Group Subscription", callback_data="show_groupsub_list", style="primary")],
+        [InlineKeyboardButton(text="🤖 Clone Bot", callback_data="show_clone", style="primary")]
     ])
 
 def get_welcome_text() -> str:
@@ -137,6 +138,42 @@ Premium helps your campaigns get noticed faster while unlocking advanced promoti
 <pre>Perfect for users who want better reach, faster growth, and stronger campaign performance.</pre>
 👇 Select a premium plan below to to purchase"""
         await message.answer(msg, reply_markup=get_premium_keyboard(), parse_mode="HTML")
+    elif args == "clone":
+        # Redirect to clone feature — handled by clone.py router
+        from handlers.clone import show_clone_info
+        # Create a fake callback-like flow by showing the clone info directly
+        from database.sqlite import get_clone_quota, get_cloned_bots_by_owner
+        quota = get_clone_quota(message.from_user.id)
+        remaining = quota["total_slots"] - quota["used_slots"]
+
+        msg = (
+            "🤖 <b>Clone Your Own Premium Group Bot!</b>\n\n"
+            "Turn any Telegram group into a <b>premium membership</b> community.\n\n"
+            "✨ <b>How it works:</b>\n"
+            "1️⃣ Create a bot with <a href='https://t.me/BotFather'>@BotFather</a>\n"
+            "2️⃣ Send us the token\n"
+            "3️⃣ Add the bot to your group as admin\n"
+            "4️⃣ Set subscription packages\n"
+            "5️⃣ Start earning from group memberships!\n\n"
+            "💰 <b>You earn 90%</b> of all USDT payments + 100% of Telegram Stars.\n\n"
+            f"📊 <b>Your Slots:</b> {quota['used_slots']}/{quota['total_slots']} used ({remaining} remaining)\n"
+        )
+
+        buttons = [[InlineKeyboardButton(text="🤖 Create My Bot", callback_data="clone_create")]]
+        if remaining <= 0:
+            buttons.append([InlineKeyboardButton(text=f"🛒 Buy +5 Slots (⭐️ {config.CLONE_SLOT_STARS_PRICE} / 🪙 {config.CLONE_SLOT_USDT_PRICE} USDT)", callback_data="clone_buy_slots")])
+
+        my_bots = get_cloned_bots_by_owner(message.from_user.id)
+        if my_bots:
+            msg += "\n<b>Your Bots:</b>\n"
+            for b in my_bots:
+                status_icon = "🟢" if b["clone_status"] == "active" else "🔴"
+                msg += f"  {status_icon} @{b['bot_username']}\n"
+
+        buttons.append([InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")])
+        markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+        await message.answer(msg, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
     else:
         await message.answer(get_welcome_text(), reply_markup=get_main_keyboard(), parse_mode="HTML")
 
