@@ -262,17 +262,19 @@ async def clone_pay_crypto(callback: CallbackQuery):
 async def cancel_clone_invoice(callback: CallbackQuery):
     invoice_id = callback.data.split("_")[1]
 
-    headers = {"x-api-key": config.BSC_API_KEY}
-    async with aiohttp.ClientSession() as session:
-        async with session.post(f"https://bscusdtapi.onrender.com/api/invoices/{invoice_id}/cancel", headers=headers) as resp:
-            if resp.status in [200, 201, 400, 404]:
-                update_clone_invoice_status(invoice_id, "canceled")
-                markup = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="🔙 Main Menu", callback_data="clone_main_menu")]
-                ])
-                await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>❌ Invoice canceled successfully.</p>", markup)
-            else:
-                await callback.answer("Failed to cancel. Try again.", show_alert=True)
+    try:
+        headers = {"x-api-key": config.BSC_API_KEY}
+        async with aiohttp.ClientSession() as session:
+            async with session.post(f"https://bscusdtapi.onrender.com/api/invoices/{invoice_id}/cancel", headers=headers) as resp:
+                pass # Best effort to cancel on gateway
+    except Exception as e:
+        logger.error(f"Clone API cancel error: {e}")
+
+    update_clone_invoice_status(invoice_id, "canceled")
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Main Menu", callback_data="clone_main_menu")]
+    ])
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>❌ Invoice canceled successfully.</p>", markup)
     await callback.answer()
 
 
