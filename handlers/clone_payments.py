@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, PreCheckoutQuery, Message, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery, PreCheckoutQuery, Message, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton, CopyTextButton
 from database.sqlite import (
     get_group_package_by_id, get_cloned_bot_by_id,
     extend_clone_subscription, get_pending_clone_invoice,
@@ -233,6 +233,7 @@ async def clone_pay_crypto(callback: CallbackQuery):
                     add_clone_crypto_invoice(invoice_id, user_id, bot_id, group_id, package_name, usdt_amount, temp_address)
 
                     markup = InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text="📋 Copy Address", copy_text=CopyTextButton(text=temp_address))],
                         [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelcloneinvoice_{invoice_id}", style="danger")],
                         [InlineKeyboardButton(text="🔙 Main Menu", callback_data="clone_main_menu")]
                     ])
@@ -242,7 +243,7 @@ async def clone_pay_crypto(callback: CallbackQuery):
                         f"<p>Package: <b>{package_name}</b></p>\n"
                         f"<p>Amount: <code>{usdt_amount}</code> USDT</p>\n"
                         f"<p>Send <b>exactly</b> {usdt_amount} USDT via <b>BSC (BEP20)</b> to:</p>\n"
-                        f"<pre><code>{temp_address}</code></pre>\n"
+                        f"<p><code>{temp_address}</code></p>\n"
                         f"<p><i>The system will automatically detect your payment and send you an activation button.</i></p>"
                     )
                     await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)

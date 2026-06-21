@@ -1,5 +1,5 @@
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, PreCheckoutQuery, Message, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.types import CallbackQuery, PreCheckoutQuery, Message, LabeledPrice, InlineKeyboardMarkup, InlineKeyboardButton, CopyTextButton
 from database.mongo import is_banned, save_gem_payment, save_premium_payment
 from database.sqlite import log_local_payment, extend_group_subscription, get_pending_crypto_invoices, add_crypto_invoice, update_crypto_invoice_status
 import config
@@ -205,6 +205,7 @@ async def process_paycrypto_callback(callback: CallbackQuery):
                     add_crypto_invoice(invoice_id, user_id, package_name, temp_address)
                     
                     markup = InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text="📋 Copy Address", copy_text=CopyTextButton(text=temp_address))],
                         [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelinvoice_{invoice_id}", style="danger")],
                         [InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]
                     ])
@@ -214,7 +215,7 @@ async def process_paycrypto_callback(callback: CallbackQuery):
                         f"<p>Package: <b>{package_name}</b></p>\n"
                         f"<p>Amount Required: <code>{usdt_amount}</code> USDT</p>\n"
                         f"<p>Send <b>exactly</b> {usdt_amount} USDT via the <b>Binance Smart Chain (BEP20)</b> network to the address below:</p>\n"
-                        f"<pre><code>{temp_address}</code></pre>\n"
+                        f"<p><code>{temp_address}</code></p>\n"
                         f"<p><i>Note: The system will automatically detect the payment and send you a claim button here. This may take a few minutes.</i></p>"
                     )
                     await safe_edit_rich_message(
