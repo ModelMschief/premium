@@ -3,6 +3,7 @@ from aiogram.filters import CommandStart, CommandObject
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database.mongo import is_banned
 import config
+from rich_utils import safe_send_rich_message, safe_edit_rich_message
 
 router = Router()
 
@@ -10,7 +11,7 @@ def get_gems_keyboard() -> InlineKeyboardMarkup:
     buttons = []
     for pkg in config.GEMS_PACKAGES:
         buttons.append([InlineKeyboardButton(text=f"💎 {pkg['name']} | ⭐️ {pkg['stars']} | 🪙 {pkg['USDT']} USDT", callback_data=f"buy_gems_{pkg['gems']}_{pkg['stars']}", style="primary")])
-    buttons.append([InlineKeyboardButton(text="✍️ Custom Amount", callback_data="custom_gems",style="success")])
+    buttons.append([InlineKeyboardButton(text="✍️ Custom Amount", callback_data="custom_gems", style="primary")])
     buttons.append([InlineKeyboardButton(text="🔙 Back to Main Menu", callback_data="main_menu")])
     return InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -31,13 +32,15 @@ def get_main_keyboard() -> InlineKeyboardMarkup:
 
 def get_welcome_text() -> str:
     return (
-        "👋 <b>Welcome! to the Official Payment Bot!</b>✨\n\n"
-        "🤝 This bot is your central hub for purchasing Gems and Premium plans For our network of bots. "
-        "All purchases are securely processed.\n\n"
-        "🔹 <b>Gems:</b> Use gems for special in-bot actions. (in @anoni67_bot)\n"
-        "🔹 <b>Premium:</b> Unlock exclusive features and remove restrictions. (in @anoni67_bot)\n"
-        "🔹 <b>Group Sub:</b> Buy access to send messages in our exclusive groups.\n\n"
-        "Select an option below to browse our packages:"
+        "<h1>👋 Welcome to the Official Payment Bot! ✨</h1>\n"
+        "<p>🤝 This bot is your central hub for purchasing Gems and Premium plans for our network of bots. "
+        "All purchases are securely processed.</p>\n"
+        "<ul>"
+        "<li><b>💎 Gems:</b> Use gems for special in-bot actions. (in @anoni67_bot)</li>"
+        "<li><b>👑 Premium:</b> Unlock exclusive features and remove restrictions. (in @anoni67_bot)</li>"
+        "<li><b>💬 Group Sub:</b> Buy access to send messages in our exclusive groups.</li>"
+        "</ul>"
+        "<p>Select an option below to browse our packages:</p>"
     )
 
 @router.message(CommandStart())
@@ -81,125 +84,128 @@ async def cmd_start(message: Message, command: CommandObject):
         chat_link = f"<a href='{invite_link}'>{title}</a>" if invite_link else f"<b>{title}</b>"
             
         buttons = []
+        table_html = "<table border=\"1\"><tr><th>Package</th><th>Stars</th><th>USDT</th></tr>"
         for pkg in config.GROUP_SUB_PACKAGES:
             usdt_val = round(pkg['stars'] * 0.02, 2)
+            table_html += f"<tr><td>{pkg['name']}</td><td>{pkg['stars']} ⭐️</td><td>{usdt_val} USDT</td></tr>"
             buttons.append([InlineKeyboardButton(
-                text=f"💎 {pkg['name']} | ⭐️ {pkg['stars']} | 🪙 {usdt_val} USDT", 
+                text=f"💎 Select {pkg['name']}", 
                 callback_data=f"buy_groupsub_{chat_id}_{pkg['duration_days']}_{pkg['stars']}",
                 style="primary"
             )])
+        table_html += "</table>"
+
         buttons.append([InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")])
         markup = InlineKeyboardMarkup(inline_keyboard=buttons)
         
-        await message.answer(
-            f"💎 <b>Subscription for {chat_link}</b>\n\n"
-            "✅ You are a member!\n\n"
-            "Choose a subscription package below to enable messaging in this group.",
+        msg_html = (
+            f"<h3>💎 Subscription for {chat_link}</h3>\n"
+            "<p>✅ You are a member!</p>\n"
+            f"{table_html}\n"
+            "<p>Choose a subscription package below to enable messaging in this group.</p>"
+        )
+
+        await safe_send_rich_message(
+            bot=message.bot,
+            chat_id=message.chat.id,
+            html_content=msg_html,
             reply_markup=markup,
-            parse_mode="HTML",
             disable_web_page_preview=True
         )
+
     elif args == "buygems":
-        msg = f"""💎 <b>Buy Gems</b>
-
-Gems power <b>Promo Join Campaigns</b>, helping you gain verified members for your channel or group.
-
-✨ <b>With Gems you can:</b>
-• 🚀 Launch Promo Join campaigns
-• 👥 Get verified joins
-• 📈 Grow your community faster
-• 🎯 Access higher campaign tiers
-<blockquote>
-More Gems = More campaigns = More opportunities to gain verified members.
-</blockquote>
-💡 Premium users spend fewer Gems on Promo Join tiers.
-
-📖 <a href="https://promoter-jwe5.onrender.com/promo-join.html?lang=en">Learn More About Promo Join</a>
-
-👇 Choose a Gem package below."""
-        await message.answer(msg, reply_markup=get_gems_keyboard(), parse_mode="HTML")
+        msg = f"""<h3>💎 Buy Gems</h3>
+<p>Gems power <b>Promo Join Campaigns</b>, helping you gain verified members for your channel or group.</p>
+<p>✨ <b>With Gems you can:</b></p>
+<ul>
+<li>🚀 Launch Promo Join campaigns</li>
+<li>👥 Get verified joins</li>
+<li>📈 Grow your community faster</li>
+<li>🎯 Access higher campaign tiers</li>
+</ul>
+<blockquote>More Gems = More campaigns = More opportunities to gain verified members.</blockquote>
+<p>💡 Premium users spend fewer Gems on Promo Join tiers.</p>
+<p>📖 <a href="https://promoter-jwe5.onrender.com/promo-join.html?lang=en">Learn More About Promo Join</a></p>
+<p>👇 Choose a Gem package below.</p>"""
+        await safe_send_rich_message(message.bot, message.chat.id, msg, get_gems_keyboard())
     elif args == "buypremium":
-        msg = f"""💎 <b>Upgrade to Premium</b>
-
-Unlock stronger visibility, faster promotion handling, and powerful tools designed to help your content reach more people.
-
-✨ <b>Premium Benefits</b>
-
-• 🚀 Priority task placement
-• 📢 Up to <b>10 Group Promotions</b> per day
-• 🖼️ <b>Pic Broad</b> access
-• 💎 Lower <b>Promo Join</b> gem costs
-• ⚡ Faster processing
-• 🛟 Priority support
-<blockquote>
-Premium helps your campaigns get noticed faster while unlocking advanced promotion features.
-</blockquote>
-📖 <a href="https://promoter-jwe5.onrender.com/premium.html?lang=en">View Full Premium Details</a>
+        msg = f"""<h3>💎 Upgrade to Premium</h3>
+<p>Unlock stronger visibility, faster promotion handling, and powerful tools designed to help your content reach more people.</p>
+<p>✨ <b>Premium Benefits</b></p>
+<ul>
+<li>🚀 Priority task placement</li>
+<li>📢 Up to <b>10 Group Promotions</b> per day</li>
+<li>🖼️ <b>Pic Broad</b> access</li>
+<li>💎 Lower <b>Promo Join</b> gem costs</li>
+<li>⚡ Faster processing</li>
+<li>🛟 Priority support</li>
+</ul>
+<blockquote>Premium helps your campaigns get noticed faster while unlocking advanced promotion features.</blockquote>
+<p>📖 <a href="https://promoter-jwe5.onrender.com/premium.html?lang=en">View Full Premium Details</a></p>
 <pre>Perfect for users who want better reach, faster growth, and stronger campaign performance.</pre>
-👇 Select a premium plan below to to purchase"""
-        await message.answer(msg, reply_markup=get_premium_keyboard(), parse_mode="HTML")
+<p>👇 Select a premium plan below to purchase</p>"""
+        await safe_send_rich_message(message.bot, message.chat.id, msg, get_premium_keyboard())
     elif args == "clone":
         # Redirect to clone feature — handled by clone.py router
         from handlers.clone import show_clone_info
-        # Create a fake callback-like flow by showing the clone info directly
         from database.sqlite import get_clone_quota, get_cloned_bots_by_owner
         quota = get_clone_quota(message.from_user.id)
         remaining = quota["total_slots"] - quota["used_slots"]
 
         msg = (
-            "🤖 <b>Clone Your Own Premium Group Bot!</b>\n\n"
-            "Turn any Telegram group into a <b>premium membership</b> community.\n\n"
-            "✨ <b>How it works:</b>\n"
-            "1️⃣ Create a bot with <a href='https://t.me/BotFather'>@BotFather</a>\n"
-            "2️⃣ Send us the token\n"
-            "3️⃣ Add the bot to your group as admin\n"
-            "4️⃣ Set subscription packages\n"
-            "5️⃣ Start earning from group memberships!\n\n"
-            "💰 <b>You earn 90%</b> of all USDT payments + 100% of Telegram Stars.\n\n"
-            f"📊 <b>Your Slots:</b> {quota['used_slots']}/{quota['total_slots']} used ({remaining} remaining)\n"
+            "<h3>🤖 Clone Your Own Premium Group Bot!</h3>\n"
+            "<p>Turn any Telegram group into a <b>premium membership</b> community.</p>\n"
+            "<p>✨ <b>How it works:</b></p>\n"
+            "<ol>"
+            "<li>Create a bot with <a href='https://t.me/BotFather'>@BotFather</a></li>"
+            "<li>Send us the token</li>"
+            "<li>Add the bot to your group as admin</li>"
+            "<li>Set subscription packages</li>"
+            "<li>Start earning from group memberships!</li>"
+            "</ol>\n"
+            "<p>💰 <b>You earn 90%</b> of all USDT payments + 100% of Telegram Stars.</p>\n"
+            f"<p>📊 <b>Your Slots:</b> {quota['used_slots']}/{quota['total_slots']} used ({remaining} remaining)</p>\n"
         )
 
-        buttons = [[InlineKeyboardButton(text="🤖 Create My Bot", callback_data="clone_create")]]
+        buttons = [[InlineKeyboardButton(text="🤖 Create My Bot", callback_data="clone_create", style="primary")]]
         if remaining <= 0:
-            buttons.append([InlineKeyboardButton(text=f"🛒 Buy +5 Slots (⭐️ {config.CLONE_SLOT_STARS_PRICE} / 🪙 {config.CLONE_SLOT_USDT_PRICE} USDT)", callback_data="clone_buy_slots")])
+            buttons.append([InlineKeyboardButton(text=f"🛒 Buy +5 Slots (⭐️ {config.CLONE_SLOT_STARS_PRICE} / 🪙 {config.CLONE_SLOT_USDT_PRICE} USDT)", callback_data="clone_buy_slots", style="primary")])
 
         my_bots = get_cloned_bots_by_owner(message.from_user.id)
         if my_bots:
-            msg += "\n<b>Your Bots:</b>\n"
+            msg += "<p><b>Your Bots:</b></p><ul>"
             for b in my_bots:
                 status_icon = "🟢" if b["clone_status"] == "active" else "🔴"
-                msg += f"  {status_icon} @{b['bot_username']}\n"
+                msg += f"<li>{status_icon} @{b['bot_username']}</li>"
+            msg += "</ul>"
 
         buttons.append([InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")])
         markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-        await message.answer(msg, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
+        await safe_send_rich_message(message.bot, message.chat.id, msg, markup, disable_web_page_preview=True)
     else:
-        await message.answer(get_welcome_text(), reply_markup=get_main_keyboard(), parse_mode="HTML")
+        await safe_send_rich_message(message.bot, message.chat.id, get_welcome_text(), get_main_keyboard())
 
 @router.callback_query(F.data == "show_gems")
 async def process_show_gems(callback: CallbackQuery):
     if await is_banned(callback.from_user.id):
         await callback.answer("You are banned.", show_alert=True)
         return
-    msg = f"""💎 <b>Buy Gems</b>
-
-Gems power <b>Promo Join Campaigns</b>, helping you gain verified members for your channel or group.
-
-✨ <b>With Gems you can:</b>
-• 🚀 Launch Promo Join campaigns
-• 👥 Get verified joins
-• 📈 Grow your community faster
-• 🎯 Access higher campaign tiers
-<blockquote>
-More Gems = More campaigns = More opportunities to gain verified members.
-</blockquote>
-💡 Premium users spend fewer Gems on Promo Join tiers.
-
-📖 <a href="https://promoter-jwe5.onrender.com/promo-join.html?lang=en">Learn More About Promo Join</a>
-
-👇 Choose a Gem package below."""
-    await callback.message.edit_text(msg, reply_markup=get_gems_keyboard(), parse_mode="HTML")
+    msg = f"""<h3>💎 Buy Gems</h3>
+<p>Gems power <b>Promo Join Campaigns</b>, helping you gain verified members for your channel or group.</p>
+<p>✨ <b>With Gems you can:</b></p>
+<ul>
+<li>🚀 Launch Promo Join campaigns</li>
+<li>👥 Get verified joins</li>
+<li>📈 Grow your community faster</li>
+<li>🎯 Access higher campaign tiers</li>
+</ul>
+<blockquote>More Gems = More campaigns = More opportunities to gain verified members.</blockquote>
+<p>💡 Premium users spend fewer Gems on Promo Join tiers.</p>
+<p>📖 <a href="https://promoter-jwe5.onrender.com/promo-join.html?lang=en">Learn More About Promo Join</a></p>
+<p>👇 Choose a Gem package below.</p>"""
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg, get_gems_keyboard())
+    await callback.answer()
 
 @router.callback_query(F.data == "show_premium")
 async def process_show_premium(callback: CallbackQuery):
@@ -207,32 +213,31 @@ async def process_show_premium(callback: CallbackQuery):
         await callback.answer("You are banned.", show_alert=True)
         return
     
-    msg = f"""💎 <b>Upgrade to Premium</b>
-
-Unlock stronger visibility, faster promotion handling, and powerful tools designed to help your content reach more people.
-
-✨ <b>Premium Benefits</b>
-
-• 🚀 Priority task placement
-• 📢 Up to <b>10 Group Promotions</b> per day
-• 🖼️ <b>Pic Broad</b> access
-• 💎 Lower <b>Promo Join</b> gem costs
-• ⚡ Faster processing
-• 🛟 Priority support
-<blockquote>
-Premium helps your campaigns get noticed faster while unlocking advanced promotion features.
-</blockquote>
-📖 <a href="https://promoter-jwe5.onrender.com/premium.html?lang=en">View Full Premium Details</a>
+    msg = f"""<h3>💎 Upgrade to Premium</h3>
+<p>Unlock stronger visibility, faster promotion handling, and powerful tools designed to help your content reach more people.</p>
+<p>✨ <b>Premium Benefits</b></p>
+<ul>
+<li>🚀 Priority task placement</li>
+<li>📢 Up to <b>10 Group Promotions</b> per day</li>
+<li>🖼️ <b>Pic Broad</b> access</li>
+<li>💎 Lower <b>Promo Join</b> gem costs</li>
+<li>⚡ Faster processing</li>
+<li>🛟 Priority support</li>
+</ul>
+<blockquote>Premium helps your campaigns get noticed faster while unlocking advanced promotion features.</blockquote>
+<p>📖 <a href="https://promoter-jwe5.onrender.com/premium.html?lang=en">View Full Premium Details</a></p>
 <pre>Perfect for users who want better reach, faster growth, and stronger campaign performance.</pre>
-👇 Select a premium plan below to to purchase"""
-    await callback.message.edit_text(msg, reply_markup=get_premium_keyboard(), parse_mode="HTML")
+<p>👇 Select a premium plan below to purchase</p>"""
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg, get_premium_keyboard())
+    await callback.answer()
 
 @router.callback_query(F.data == "main_menu")
 async def process_main_menu(callback: CallbackQuery):
     if await is_banned(callback.from_user.id):
         await callback.answer("You are banned.", show_alert=True)
         return
-    await callback.message.edit_text(get_welcome_text(), reply_markup=get_main_keyboard(), parse_mode="HTML")
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, get_welcome_text(), get_main_keyboard())
+    await callback.answer()
 
 @router.callback_query(F.data == "show_groupsub_list")
 async def process_show_groupsub_list(callback: CallbackQuery):
@@ -253,12 +258,13 @@ async def process_show_groupsub_list(callback: CallbackQuery):
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
     
     msg = (
-        "💬 <b>Group Subscriptions</b>\n\n"
-        "To send messages in our exclusive groups, you need an active subscription. "
-        "This helps us maintain a high-quality community and prevent spam.\n\n"
-        "👇 Please select a group below to check your status or purchase a subscription:"
+        "<h3>💬 Group Subscriptions</h3>\n"
+        "<p>To send messages in our exclusive groups, you need an active subscription. "
+        "This helps us maintain a high-quality community and prevent spam.</p>\n"
+        "<p>👇 Please select a group below to check your status or purchase a subscription:</p>"
     )
-    await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg, markup)
+    await callback.answer()
 
 @router.callback_query(F.data.startswith("check_group_"))
 async def process_check_group(callback: CallbackQuery):
@@ -288,38 +294,49 @@ async def process_check_group(callback: CallbackQuery):
         # Not in group, send invite link
         inline_buttons = []
         if invite_link:
-            inline_buttons.append([InlineKeyboardButton(text="🔗 Join Group First", url=invite_link)])
+            inline_buttons.append([InlineKeyboardButton(text="🔗 Join Group First", url=invite_link, style="primary")])
         inline_buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="show_groupsub_list")])
         
         markup = InlineKeyboardMarkup(inline_keyboard=inline_buttons)
-        await callback.message.edit_text(
-            f"❌ You are not a member of <b>{title}</b>.\n\n"
-            f"You must join the group before you can purchase a subscription for it.",
-            reply_markup=markup,
-            parse_mode="HTML"
+        msg_html = (
+            f"<h3>❌ Not a Member</h3>\n"
+            f"<p>You are not a member of <b>{title}</b>.</p>\n"
+            f"<p>You must join the group before you can purchase a subscription for it.</p>"
         )
+        await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
+        await callback.answer()
         return
         
     # Is a member, show packages
     buttons = []
+    table_html = "<table border=\"1\"><tr><th>Package</th><th>Stars</th><th>USDT</th></tr>"
     for pkg in config.GROUP_SUB_PACKAGES:
         usdt_val = round(pkg['stars'] * 0.02, 2)
+        table_html += f"<tr><td>{pkg['name']}</td><td>{pkg['stars']} ⭐️</td><td>{usdt_val} USDT</td></tr>"
         buttons.append([InlineKeyboardButton(
-            text=f"💎 {pkg['name']} | ⭐️ {pkg['stars']} | 🪙 {usdt_val} USDT", 
+            text=f"💎 Select {pkg['name']}", 
             callback_data=f"buy_groupsub_{chat_id}_{pkg['duration_days']}_{pkg['stars']}",
             style="primary"
         )])
+    table_html += "</table>"
     buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="show_groupsub_list")])
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
     
     chat_link = f"<a href='{invite_link}'>{title}</a>" if invite_link else f"<b>{title}</b>"
     
-    await callback.message.edit_text(
-        f"💎 <b>Subscription for {chat_link}</b>\n\n"
-        "✅ You are a member!\n\n"
-        "Choose a subscription package below to enable messaging in this group.",
-        reply_markup=markup,
-        parse_mode="HTML",
-        disable_web_page_preview=True
+    msg_html = (
+        f"<h3>💎 Subscription for {chat_link}</h3>\n"
+        "<p>✅ You are a member!</p>\n"
+        f"{table_html}\n"
+        "<p>Choose a subscription package below to enable messaging in this group.</p>"
     )
 
+    await safe_edit_rich_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        html_content=msg_html,
+        reply_markup=markup,
+        disable_web_page_preview=True
+    )
+    await callback.answer()

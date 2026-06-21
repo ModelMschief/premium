@@ -104,7 +104,7 @@ async def owner_manage_groups(callback: CallbackQuery):
 
     if not groups:
         markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group")],
+            [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group", style="primary")],
             [InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")]
         ])
         await callback.message.edit_text(
@@ -120,7 +120,8 @@ async def owner_manage_groups(callback: CallbackQuery):
         pkg_count = len(get_group_packages(g["group_id"]))
         buttons.append([InlineKeyboardButton(
             text=f"📢 {g['group_title']} ({pkg_count} packages)",
-            callback_data=f"owner_group_{g['group_id']}"
+            callback_data=f"owner_group_{g['group_id']}",
+            style="primary"
         )])
     buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")])
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -151,13 +152,13 @@ async def owner_group_detail(callback: CallbackQuery):
         msg += "<i>No packages configured yet.</i>\n"
 
     buttons = [
-        [InlineKeyboardButton(text="➕ Add Package", callback_data=f"owner_addpkg_{group_id}")],
+        [InlineKeyboardButton(text="➕ Add Package", callback_data=f"owner_addpkg_{group_id}", style="primary")],
     ]
     if packages:
         for pkg in packages:
             buttons.append([
-                InlineKeyboardButton(text=f"✏️ Edit {pkg['duration_days']}d", callback_data=f"owner_editpkg_{pkg['package_id']}"),
-                InlineKeyboardButton(text=f"🗑 Del {pkg['duration_days']}d", callback_data=f"owner_delpkg_{pkg['package_id']}_{group_id}")
+                InlineKeyboardButton(text=f"✏️ Edit {pkg['duration_days']}d", callback_data=f"owner_editpkg_{pkg['package_id']}", style="primary"),
+                InlineKeyboardButton(text=f"🗑 Del {pkg['duration_days']}d", callback_data=f"owner_delpkg_{pkg['package_id']}_{group_id}", style="primary")
             ])
     buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="owner_manage_groups")])
 
@@ -315,10 +316,10 @@ async def owner_wallet(callback: CallbackQuery):
     wallet_display = balance["withdrawal_address"] or "<i>Not set</i>"
 
     buttons = [
-        [InlineKeyboardButton(text="💳 Set/Change Wallet", callback_data="owner_set_wallet")],
+        [InlineKeyboardButton(text="💳 Set/Change Wallet", callback_data="owner_set_wallet", style="primary")],
     ]
     if balance["balance_usdt"] > 0 and balance["withdrawal_address"]:
-        buttons.append([InlineKeyboardButton(text=f"💸 Withdraw ${balance['balance_usdt']:.2f}", callback_data="owner_withdraw_confirm")])
+        buttons.append([InlineKeyboardButton(text=f"💸 Withdraw ${balance['balance_usdt']:.2f}", callback_data="owner_withdraw_confirm", style="primary")])
     buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")])
 
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -395,7 +396,7 @@ async def owner_withdraw_confirm(callback: CallbackQuery):
         return
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"✅ Confirm Withdraw ${balance['balance_usdt']:.2f}", callback_data="owner_withdraw_execute")],
+        [InlineKeyboardButton(text=f"✅ Confirm Withdraw ${balance['balance_usdt']:.2f}", callback_data="owner_withdraw_execute", style="primary")],
         [InlineKeyboardButton(text="🔙 Cancel", callback_data="owner_wallet")]
     ])
 

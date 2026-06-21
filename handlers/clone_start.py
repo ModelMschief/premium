@@ -7,9 +7,9 @@ from database.sqlite import (
 )
 import config
 import datetime
+from rich_utils import safe_send_rich_message, safe_edit_rich_message
 
 router = Router()
-
 
 def get_viral_button() -> list:
     """Returns the viral growth button that appears on every screen."""
@@ -17,7 +17,6 @@ def get_viral_button() -> list:
     if main_bot:
         return [InlineKeyboardButton(text="🤖 Get Your Own Premium Group Bot — FREE!", url=f"https://t.me/{main_bot}?start=clone")]
     return []
-
 
 @router.message(CommandStart())
 async def clone_cmd_start(message: Message, command: CommandObject):
@@ -58,19 +57,21 @@ async def clone_cmd_start(message: Message, command: CommandObject):
         if viral:
             buttons.append(viral)
         markup = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
-        await message.answer(
-            "👋 <b>Welcome!</b>\n\n"
-            "This bot manages premium group subscriptions.\n"
-            "No groups are configured yet. Please check back later!",
-            reply_markup=markup, parse_mode="HTML"
+        
+        msg_html = (
+            "<h3>👋 Welcome!</h3>\n"
+            "<p>This bot manages premium group subscriptions.</p>\n"
+            "<p>No groups are configured yet. Please check back later!</p>"
         )
+        await safe_send_rich_message(message.bot, message.chat.id, msg_html, markup)
         return
 
     buttons = []
     for g in groups:
         buttons.append([InlineKeyboardButton(
             text=f"📢 {g['group_title']}",
-            callback_data=f"clonesub_{g['group_id']}"
+            callback_data=f"clonesub_{g['group_id']}",
+            style="primary"
         )])
 
     viral = get_viral_button()
@@ -79,12 +80,11 @@ async def clone_cmd_start(message: Message, command: CommandObject):
 
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    await message.answer(
-        "👋 <b>Welcome!</b>\n\n"
-        "Select a group below to view subscription options and gain access to premium content.",
-        reply_markup=markup, parse_mode="HTML"
+    msg_html = (
+        "<h3>👋 Welcome!</h3>\n"
+        "<p>Select a group below to view subscription options and gain access to premium content.</p>"
     )
-
+    await safe_send_rich_message(message.bot, message.chat.id, msg_html, markup)
 
 async def show_owner_dashboard(message: Message, bot_id: int, bot_username: str):
     """Show the owner's management dashboard."""
@@ -92,19 +92,20 @@ async def show_owner_dashboard(message: Message, bot_id: int, bot_username: str)
     group_count = len(groups)
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group")],
-        [InlineKeyboardButton(text=f"📋 Manage Groups ({group_count})", callback_data="owner_manage_groups")],
-        [InlineKeyboardButton(text="💰 Wallet & Withdrawals", callback_data="owner_wallet")],
+        [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group", style="primary")],
+        [InlineKeyboardButton(text=f"📋 Manage Groups ({group_count})", callback_data="owner_manage_groups", style="primary")],
+        [InlineKeyboardButton(text="💰 Wallet & Withdrawals", callback_data="owner_wallet", style="primary")],
     ])
 
-    await message.answer(
-        f"🏠 <b>Owner Dashboard</b>\n\n"
-        f"🤖 Bot: @{bot_username}\n"
-        f"📢 Connected Groups: <b>{group_count}</b>\n\n"
-        f"Select an option below to manage your bot.",
-        reply_markup=markup, parse_mode="HTML"
+    msg_html = (
+        f"<h3>🏠 Owner Dashboard</h3>\n"
+        f"<ul>"
+        f"<li>🤖 Bot: @{bot_username}</li>\n"
+        f"<li>📢 Connected Groups: <b>{group_count}</b></li>\n"
+        f"</ul>"
+        f"<p>Select an option below to manage your bot.</p>"
     )
-
+    await safe_send_rich_message(message.bot, message.chat.id, msg_html, markup)
 
 async def show_group_subscription(message_or_callback, group_id: int, bot_id: int, bot_username: str):
     """Show subscription packages for a specific group to a regular user."""
@@ -117,14 +118,14 @@ async def show_group_subscription(message_or_callback, group_id: int, bot_id: in
             buttons.append(viral)
         markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-        text = (
-            "📦 <b>No Packages Available</b>\n\n"
-            "The group owner hasn't configured any subscription packages yet."
+        msg_html = (
+            "<h3>📦 No Packages Available</h3>\n"
+            "<p>The group owner hasn't configured any subscription packages yet.</p>"
         )
         if isinstance(message_or_callback, Message):
-            await message_or_callback.answer(text, reply_markup=markup, parse_mode="HTML")
+            await safe_send_rich_message(message_or_callback.bot, message_or_callback.chat.id, msg_html, markup)
         else:
-            await message_or_callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+            await safe_edit_rich_message(message_or_callback.bot, message_or_callback.message.chat.id, message_or_callback.message.message_id, msg_html, markup)
         return
 
     # Check current subscription
@@ -136,16 +137,20 @@ async def show_group_subscription(message_or_callback, group_id: int, bot_id: in
         now = datetime.datetime.now(datetime.timezone.utc)
         if expiry_dt > now:
             remaining = (expiry_dt - now).days
-            sub_status = f"\n✅ <b>Active subscription:</b> {remaining} days remaining\n"
+            sub_status = f"<p>✅ <b>Active subscription:</b> {remaining} days remaining</p>\n"
         else:
-            sub_status = "\n⚠️ <b>Subscription expired.</b> Renew below!\n"
+            sub_status = "<p>⚠️ <b>Subscription expired.</b> Renew below!</p>\n"
 
     buttons = []
+    table_html = "<table border=\"1\"><tr><th>Duration</th><th>Stars</th><th>USDT</th></tr>"
     for pkg in packages:
+        table_html += f"<tr><td>{pkg['duration_days']} Days</td><td>{pkg['stars_price']} ⭐️</td><td>{pkg['usdt_price']} USDT</td></tr>"
         buttons.append([InlineKeyboardButton(
-            text=f"💎 {pkg['duration_days']} Days | ⭐️ {pkg['stars_price']} | 🪙 {pkg['usdt_price']} USDT",
-            callback_data=f"clonebuy_{group_id}_{pkg['package_id']}"
+            text=f"💎 Select {pkg['duration_days']} Days Plan",
+            callback_data=f"clonebuy_{group_id}_{pkg['package_id']}",
+            style="primary"
         )])
+    table_html += "</table>"
 
     buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")])
     viral = get_viral_button()
@@ -154,16 +159,17 @@ async def show_group_subscription(message_or_callback, group_id: int, bot_id: in
 
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    text = (
-        f"📦 <b>Subscription Packages</b>\n"
-        f"{sub_status}\n"
-        f"Select a package to purchase access:"
+    msg_html = (
+        f"<h3>📦 Subscription Packages</h3>\n"
+        f"{sub_status}"
+        f"{table_html}\n"
+        f"<p>Select a package to purchase access:</p>"
     )
 
     if isinstance(message_or_callback, Message):
-        await message_or_callback.answer(text, reply_markup=markup, parse_mode="HTML")
+        await safe_send_rich_message(message_or_callback.bot, message_or_callback.chat.id, msg_html, markup)
     else:
-        await message_or_callback.message.edit_text(text, reply_markup=markup, parse_mode="HTML")
+        await safe_edit_rich_message(message_or_callback.bot, message_or_callback.message.chat.id, message_or_callback.message.message_id, msg_html, markup)
 
 
 # ─── Callback: View group subscription packages ─────────────
@@ -191,33 +197,36 @@ async def clone_main_menu(callback: CallbackQuery):
         groups = get_connected_groups(bot_id)
         group_count = len(groups)
         markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group")],
-            [InlineKeyboardButton(text=f"📋 Manage Groups ({group_count})", callback_data="owner_manage_groups")],
-            [InlineKeyboardButton(text="💰 Wallet & Withdrawals", callback_data="owner_wallet")],
+            [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group", style="primary")],
+            [InlineKeyboardButton(text=f"📋 Manage Groups ({group_count})", callback_data="owner_manage_groups", style="primary")],
+            [InlineKeyboardButton(text="💰 Wallet & Withdrawals", callback_data="owner_wallet", style="primary")],
         ])
-        await callback.message.edit_text(
-            f"🏠 <b>Owner Dashboard</b>\n\n"
-            f"🤖 Bot: @{bot_info.username}\n"
-            f"📢 Connected Groups: <b>{group_count}</b>\n\n"
-            f"Select an option below to manage your bot.",
-            reply_markup=markup, parse_mode="HTML"
+        msg_html = (
+            f"<h3>🏠 Owner Dashboard</h3>\n"
+            f"<ul>"
+            f"<li>🤖 Bot: @{bot_info.username}</li>\n"
+            f"<li>📢 Connected Groups: <b>{group_count}</b></li>\n"
+            f"</ul>"
+            f"<p>Select an option below to manage your bot.</p>"
         )
+        await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
     else:
         groups = get_connected_groups(bot_id)
         buttons = []
         for g in groups:
             buttons.append([InlineKeyboardButton(
                 text=f"📢 {g['group_title']}",
-                callback_data=f"clonesub_{g['group_id']}"
+                callback_data=f"clonesub_{g['group_id']}",
+                style="primary"
             )])
         viral = get_viral_button()
         if viral:
             buttons.append(viral)
         markup = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
 
-        await callback.message.edit_text(
-            "👋 <b>Welcome!</b>\n\n"
-            "Select a group below to view subscription options.",
-            reply_markup=markup, parse_mode="HTML"
+        msg_html = (
+            "<h3>👋 Welcome!</h3>\n"
+            "<p>Select a group below to view subscription options.</p>"
         )
+        await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
     await callback.answer()

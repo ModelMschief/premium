@@ -10,18 +10,17 @@ import config
 import aiohttp
 import shortuuid
 import logging
+from rich_utils import safe_send_rich_message, safe_edit_rich_message
 
 logger = logging.getLogger(__name__)
 
 router = Router()
-
 
 def get_viral_button() -> list:
     main_bot = config.MAIN_BOT_USERNAME
     if main_bot:
         return [InlineKeyboardButton(text="🤖 Get Your Own Premium Group Bot — FREE!", url=f"https://t.me/{main_bot}?start=clone")]
     return []
-
 
 # ═══════════════════════════════════════════════════════════════
 # PAYMENT METHOD SELECTION
@@ -42,22 +41,26 @@ async def clone_buy_package(callback: CallbackQuery):
     markup = InlineKeyboardMarkup(inline_keyboard=[
         [InlineKeyboardButton(
             text=f"⭐️ Pay {pkg['stars_price']} Stars (Instant)",
-            callback_data=f"clonepaystars_{group_id}_{package_id}"
+            callback_data=f"clonepaystars_{group_id}_{package_id}",
+            style="primary"
         )],
         [InlineKeyboardButton(
             text=f"🪙 Pay {pkg['usdt_price']} USDT",
-            callback_data=f"clonepaycrypto_{group_id}_{package_id}"
+            callback_data=f"clonepaycrypto_{group_id}_{package_id}",
+            style="primary"
         )],
         [InlineKeyboardButton(text="🔙 Back", callback_data=f"clonesub_{group_id}")]
     ])
 
-    await callback.message.edit_text(
-        f"<b>🥇 Payment Selection</b>\n\n"
-        f"📦 <b>{pkg['duration_days']} Days</b> Access\n"
-        f"⭐️ {pkg['stars_price']} Stars / 🪙 {pkg['usdt_price']} USDT\n\n"
-        f"<i>Choose your preferred payment method:</i>",
-        reply_markup=markup, parse_mode="HTML"
+    msg_html = (
+        f"<h3>🥇 Payment Selection</h3>\n"
+        f"<ul>"
+        f"<li>📦 <b>{pkg['duration_days']} Days</b> Access</li>"
+        f"<li>⭐️ {pkg['stars_price']} Stars / 🪙 {pkg['usdt_price']} USDT</li>"
+        f"</ul>"
+        f"<p><i>Choose your preferred payment method:</i></p>"
     )
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
     await callback.answer()
 
 
@@ -130,14 +133,16 @@ async def clone_successful_payment(message: Message):
         buttons.append(viral)
     markup = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
 
-    await message.answer(
-        f"✅ <b>Payment Successful!</b>\n\n"
-        f"📦 {package_name}\n"
-        f"💰 {stars_amount} Stars\n"
-        f"🧾 <code>{payment_id}</code>\n\n"
-        f"Your subscription is now active! You can send messages in the group.",
-        reply_markup=markup, parse_mode="HTML"
+    msg_html = (
+        f"<h3>✅ Payment Successful!</h3>\n"
+        f"<ul>"
+        f"<li>📦 {package_name}</li>"
+        f"<li>💰 {stars_amount} Stars</li>"
+        f"<li>🧾 <code>{payment_id}</code></li>"
+        f"</ul>"
+        f"<p>Your subscription is now active! You can send messages in the group.</p>"
     )
+    await safe_send_rich_message(message.bot, message.chat.id, msg_html, markup)
 
     # Notify group owner
     clone_data = get_cloned_bot_by_id(bot_id)
@@ -180,16 +185,17 @@ async def clone_pay_crypto(callback: CallbackQuery):
         markup = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(
                 text=f"❌ Cancel Pending: {pending['package_name']}",
-                callback_data=f"cancelcloneinvoice_{pending['invoice_id']}"
+                callback_data=f"cancelcloneinvoice_{pending['invoice_id']}",
+                style="primary"
             )],
             [InlineKeyboardButton(text="🔙 Back", callback_data=f"clonesub_{group_id}")]
         ])
-        await callback.message.edit_text(
-            "⚠️ <b>Pending Payment Exists</b>\n\n"
-            f"You already have a pending payment for <b>{pending['package_name']}</b>.\n\n"
-            "Please cancel it or complete the payment first before creating a new invoice.",
-            reply_markup=markup, parse_mode="HTML"
+        msg_html = (
+            "<h3>⚠️ Pending Payment Exists</h3>\n"
+            f"<p>You already have a pending payment for <b>{pending['package_name']}</b>.</p>\n"
+            "<p>Please cancel it or complete the payment first before creating a new invoice.</p>"
         )
+        await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
         await callback.answer()
         return
 
@@ -213,7 +219,7 @@ async def clone_pay_crypto(callback: CallbackQuery):
 
     headers = {"x-api-key": config.BSC_API_KEY}
 
-    await callback.message.edit_text("⏳ Generating crypto invoice... Please wait.")
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>⏳ Generating crypto invoice... Please wait.</p>")
 
     async with aiohttp.ClientSession() as session:
         try:
@@ -227,26 +233,26 @@ async def clone_pay_crypto(callback: CallbackQuery):
                     add_clone_crypto_invoice(invoice_id, user_id, bot_id, group_id, package_name, usdt_amount, temp_address)
 
                     markup = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelcloneinvoice_{invoice_id}")],
+                        [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelcloneinvoice_{invoice_id}", style="primary")],
                         [InlineKeyboardButton(text="🔙 Main Menu", callback_data="clone_main_menu")]
                     ])
 
-                    await callback.message.edit_text(
-                        f"🪙 <b>Crypto Payment (USDT BEP20)</b>\n\n"
-                        f"📦 Package: <b>{package_name}</b>\n"
-                        f"💵 Amount: <code>{usdt_amount}</code> USDT\n\n"
-                        f"Send <b>exactly</b> {usdt_amount} USDT via <b>BSC (BEP20)</b> to:\n\n"
-                        f"<code>{temp_address}</code>\n\n"
-                        f"<i>The system will automatically detect your payment and send you an activation button.</i>",
-                        reply_markup=markup, parse_mode="HTML"
+                    msg_html = (
+                        f"<h3>🪙 Crypto Payment (USDT BEP20)</h3>\n"
+                        f"<p>Package: <b>{package_name}</b></p>\n"
+                        f"<p>Amount: <code>{usdt_amount}</code> USDT</p>\n"
+                        f"<p>Send <b>exactly</b> {usdt_amount} USDT via <b>BSC (BEP20)</b> to:</p>\n"
+                        f"<pre><code>{temp_address}</code></pre>\n"
+                        f"<p><i>The system will automatically detect your payment and send you an activation button.</i></p>"
                     )
+                    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
                 else:
                     error_text = await resp.text()
                     logger.error(f"Clone invoice creation failed: {resp.status} - {error_text}")
-                    await callback.message.edit_text("❌ Failed to generate invoice. Please try again later.")
+                    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>❌ Failed to generate invoice. Please try again later.</p>")
         except Exception as e:
             logger.error(f"Clone invoice exception: {e}")
-            await callback.message.edit_text("❌ Failed to generate invoice. Please try again later.")
+            await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>❌ Failed to generate invoice. Please try again later.</p>")
 
     await callback.answer()
 
@@ -264,7 +270,7 @@ async def cancel_clone_invoice(callback: CallbackQuery):
                 markup = InlineKeyboardMarkup(inline_keyboard=[
                     [InlineKeyboardButton(text="🔙 Main Menu", callback_data="clone_main_menu")]
                 ])
-                await callback.message.edit_text("❌ Invoice canceled successfully.", reply_markup=markup)
+                await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>❌ Invoice canceled successfully.</p>", markup)
             else:
                 await callback.answer("Failed to cancel. Try again.", show_alert=True)
     await callback.answer()
@@ -290,7 +296,7 @@ async def claim_clone_subscription(callback: CallbackQuery):
     invoice_id = pending["invoice_id"]
     usdt_amount = pending["usdt_amount"]
 
-    await callback.message.edit_text("⏳ Verifying your payment...")
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>⏳ Verifying your payment...</p>")
 
     headers = {"x-api-key": config.BSC_API_KEY}
     async with aiohttp.ClientSession() as session:
@@ -318,14 +324,16 @@ async def claim_clone_subscription(callback: CallbackQuery):
                     buttons.append(viral)
                 markup = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
 
-                await callback.message.edit_text(
-                    f"✅ <b>Subscription Activated!</b>\n\n"
-                    f"📦 {package_name}\n"
-                    f"💵 {usdt_amount} USDT\n"
-                    f"🧾 <code>{payment_id}</code>\n\n"
-                    f"You can now send messages in the group!",
-                    reply_markup=markup, parse_mode="HTML"
+                msg_html = (
+                    f"<h3>✅ Subscription Activated!</h3>\n"
+                    f"<ul>"
+                    f"<li>📦 {package_name}</li>"
+                    f"<li>💵 {usdt_amount} USDT</li>"
+                    f"<li>🧾 <code>{payment_id}</code></li>"
+                    f"</ul>"
+                    f"<p>You can now send messages in the group!</p>"
                 )
+                await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
 
                 # Notify owner
                 if clone_data:
@@ -360,12 +368,12 @@ async def claim_clone_subscription(callback: CallbackQuery):
                     pass
             else:
                 markup = InlineKeyboardMarkup(inline_keyboard=[
-                    [InlineKeyboardButton(text="🔄 Try Again", callback_data=callback.data)],
+                    [InlineKeyboardButton(text="🔄 Try Again", callback_data=callback.data, style="primary")],
                     [InlineKeyboardButton(text="🔙 Main Menu", callback_data="clone_main_menu")]
                 ])
-                await callback.message.edit_text(
-                    "❌ Payment not verified yet.\n\n"
-                    "If you just sent the payment, please wait a few minutes and try again.",
-                    reply_markup=markup
+                msg_html = (
+                    "<h3>❌ Payment not verified yet</h3>\n"
+                    "<p>If you just sent the payment, please wait a few minutes and try again.</p>"
                 )
+                await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
     await callback.answer()

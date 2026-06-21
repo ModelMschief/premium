@@ -5,6 +5,7 @@ from database.sqlite import log_local_payment, extend_group_subscription, get_pe
 import config
 import shortuuid
 import aiohttp
+from rich_utils import safe_send_rich_message, safe_edit_rich_message
 
 router = Router()
 
@@ -44,16 +45,23 @@ async def process_buy_callback(callback: CallbackQuery):
         usdt_amount = round(int(stars) * 0.02, 2)
     
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"⭐️ Pay {stars} Stars (Instant)", callback_data=callback_paystars,style="primary")],
-        [InlineKeyboardButton(text=f"🪙 Pay {usdt_amount} USDT", callback_data=callback_paycrypto,style="primary")],
-        [InlineKeyboardButton(text="💳 Pay with INR (UPI)", callback_data=callback_payother,style="primary")],
+        [InlineKeyboardButton(text=f"⭐️ Pay {stars} Stars (Instant)", callback_data=callback_paystars, style="primary")],
+        [InlineKeyboardButton(text=f"🪙 Pay {usdt_amount} USDT", callback_data=callback_paycrypto, style="primary")],
+        [InlineKeyboardButton(text="💳 Pay with INR (UPI)", callback_data=callback_payother, style="primary")],
         [InlineKeyboardButton(text="🔙 Cancel", callback_data="main_menu")]
     ])
     
-    await callback.message.edit_text(
-        f"<b>🥇 Payment Selection</b>\n\n"
-        f"<i>Please choose your preferred payment method below to complete the purchase.</i>", 
-        reply_markup=markup, parse_mode="HTML"
+    msg_html = (
+        f"<h3>🥇 Payment Selection</h3>\n"
+        f"<p><i>Please choose your preferred payment method below to complete the purchase.</i></p>"
+    )
+    
+    await safe_edit_rich_message(
+        bot=callback.bot,
+        chat_id=callback.message.chat.id,
+        message_id=callback.message.message_id,
+        html_content=msg_html,
+        reply_markup=markup
     )
     await callback.answer()
 
@@ -150,12 +158,19 @@ async def process_paycrypto_callback(callback: CallbackQuery):
     if len(pending_invoices) >= 3:
         buttons = []
         for inv in pending_invoices:
-            buttons.append([InlineKeyboardButton(text=f"Cancel {inv['package_name']} ({inv['invoice_id'][:8]})", callback_data=f"cancelinvoice_{inv['invoice_id']}")])
+            buttons.append([InlineKeyboardButton(text=f"❌ Cancel {inv['package_name']} ({inv['invoice_id'][:8]})", callback_data=f"cancelinvoice_{inv['invoice_id']}", style="primary")])
         buttons.append([InlineKeyboardButton(text="🔙 Cancel", callback_data="main_menu")])
         markup = InlineKeyboardMarkup(inline_keyboard=buttons)
-        await callback.message.edit_text(
-            "⚠️ <b>Limit Reached</b>\n\nYou have 3 pending crypto invoices. Please cancel one of them before creating a new one.", 
-            reply_markup=markup, parse_mode="HTML"
+        msg_html = (
+            "<h3>⚠️ Limit Reached</h3>\n"
+            "<p>You have 3 pending crypto invoices. Please cancel one of them before creating a new one.</p>"
+        )
+        await safe_edit_rich_message(
+            bot=callback.bot,
+            chat_id=callback.message.chat.id,
+            message_id=callback.message.message_id,
+            html_content=msg_html,
+            reply_markup=markup
         )
         return
         
@@ -173,7 +188,7 @@ async def process_paycrypto_callback(callback: CallbackQuery):
     
     headers = {"x-api-key": config.BSC_API_KEY}
     
-    await callback.message.edit_text("⏳ Generating crypto invoice... Please wait.")
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>⏳ Generating crypto invoice... Please wait.</p>")
     
     async with aiohttp.ClientSession() as session:
         try:
@@ -190,26 +205,32 @@ async def process_paycrypto_callback(callback: CallbackQuery):
                     add_crypto_invoice(invoice_id, user_id, package_name, temp_address)
                     
                     markup = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelinvoice_{invoice_id}")],
+                        [InlineKeyboardButton(text="❌ Cancel Invoice", callback_data=f"cancelinvoice_{invoice_id}", style="primary")],
                         [InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]
                     ])
                     
-                    msg = (
-                        f"🪙 <b>Crypto Payment (USDT BEP20)</b>\n\n"
-                        f"Package: <b>{package_name}</b>\n"
-                        f"Amount Required: <code>{usdt_amount}</code> USDT\n\n"
-                        f"Send <b>exactly</b> {usdt_amount} USDT via the <b>Binance Smart Chain (BEP20)</b> network to the address below:\n\n"
-                        f"<code>{temp_address}</code>\n\n"
-                        f"<i>Note: The system will automatically detect the payment and send you a claim button here. This may take a few minutes.</i>"
+                    msg_html = (
+                        f"<h3>🪙 Crypto Payment (USDT BEP20)</h3>\n"
+                        f"<p>Package: <b>{package_name}</b></p>\n"
+                        f"<p>Amount Required: <code>{usdt_amount}</code> USDT</p>\n"
+                        f"<p>Send <b>exactly</b> {usdt_amount} USDT via the <b>Binance Smart Chain (BEP20)</b> network to the address below:</p>\n"
+                        f"<pre><code>{temp_address}</code></pre>\n"
+                        f"<p><i>Note: The system will automatically detect the payment and send you a claim button here. This may take a few minutes.</i></p>"
                     )
-                    await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
+                    await safe_edit_rich_message(
+                        bot=callback.bot,
+                        chat_id=callback.message.chat.id,
+                        message_id=callback.message.message_id,
+                        html_content=msg_html,
+                        reply_markup=markup
+                    )
                 else:
                     error_data = await resp.text()
                     print(f"[ERROR] API Request Failed: Status {resp.status}, Response: {error_data}")
-                    await callback.message.edit_text("❌ Failed to generate crypto invoice. Please try again later or use a different payment method.")
+                    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>❌ Failed to generate crypto invoice. Please try again later or use a different payment method.</p>")
         except Exception as e:
             print(f"[ERROR] Exception during BSC API call: {e}")
-            await callback.message.edit_text("❌ Failed to generate crypto invoice. Please try again later or use a different payment method.")
+            await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>❌ Failed to generate crypto invoice. Please try again later or use a different payment method.</p>")
     await callback.answer()
 
 @router.callback_query(F.data.startswith("cancelinvoice_"))
@@ -225,7 +246,11 @@ async def process_cancelinvoice_callback(callback: CallbackQuery):
         async with session.post(f"https://bscusdtapi.onrender.com/api/invoices/{invoice_id}/cancel", headers=headers) as resp:
             if resp.status in [200, 201, 400, 404]:
                 update_crypto_invoice_status(invoice_id, "canceled")
-                await callback.message.edit_text("❌ Invoice canceled successfully.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]]))
+                await safe_edit_rich_message(
+                    bot=callback.bot, chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+                    html_content="<p>❌ Invoice canceled successfully.</p>",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]])
+                )
             else:
                 await callback.answer("Failed to cancel invoice on gateway. Try again.", show_alert=True)
     await callback.answer()
@@ -263,7 +288,7 @@ async def process_claimcrypto_callback(callback: CallbackQuery):
         
     invoice_id = pending_invoices[0]["invoice_id"]
     
-    await callback.message.edit_text("⏳ Verifying your payment...")
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, "<p>⏳ Verifying your payment...</p>")
     
     headers = {"x-api-key": config.BSC_API_KEY}
     async with aiohttp.ClientSession() as session:
@@ -275,6 +300,7 @@ async def process_claimcrypto_callback(callback: CallbackQuery):
                 payment_id = shortuuid.uuid()
                 username = callback.from_user.username or str(user_id)
                 
+                markup = None
                 if item_type == "gems":
                     await save_gem_payment(payment_id, user_id, username, package_name, gems_amount, stars_amount)
                     log_local_payment(user_id, payment_id, package_name)
@@ -282,8 +308,8 @@ async def process_claimcrypto_callback(callback: CallbackQuery):
                     
                     target_bot = config.TARGET_BOT_USERNAME
                     deep_link = f"https://t.me/{target_bot}?start={start_payload}"
-                    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link)]])
-                    success_msg = f"✅ Payment successful!\n\nItem: {package_name}\nPayment ID: `{payment_id}`\n\nClick the button below to verify and claim your reward in the Promotion Bot."
+                    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="primary")]])
+                    success_msg = f"<h3>✅ Payment successful!</h3>\n<p>Item: {package_name}<br>Payment ID: <code>{payment_id}</code></p>\n<p>Click the button below to verify and claim your reward in the Promotion Bot.</p>"
                 elif item_type == "premium":
                     await save_premium_payment(payment_id, user_id, username, package_name, duration_days, stars_amount)
                     log_local_payment(user_id, payment_id, package_name)
@@ -291,18 +317,14 @@ async def process_claimcrypto_callback(callback: CallbackQuery):
                     
                     target_bot = config.TARGET_BOT_USERNAME
                     deep_link = f"https://t.me/{target_bot}?start={start_payload}"
-                    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link)]])
-                    success_msg = f"✅ Payment successful!\n\nItem: {package_name}\nPayment ID: `{payment_id}`\n\nClick the button below to verify and claim your reward in the Promotion Bot."
+                    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="primary")]])
+                    success_msg = f"<h3>✅ Payment successful!</h3>\n<p>Item: {package_name}<br>Payment ID: <code>{payment_id}</code></p>\n<p>Click the button below to verify and claim your reward in the Promotion Bot.</p>"
                 elif item_type == "groupsub":
                     extend_group_subscription(user_id, chat_id, duration_days)
                     log_local_payment(user_id, payment_id, package_name)
-                    markup = None
-                    success_msg = f"✅ Payment successful!\n\nItem: {package_name}\nPayment ID: `{payment_id}`\n\nYour group subscription is now active! You can now send messages in the group."
+                    success_msg = f"<h3>✅ Payment successful!</h3>\n<p>Item: {package_name}<br>Payment ID: <code>{payment_id}</code></p>\n<p>Your group subscription is now active! You can now send messages in the group.</p>"
 
-                if markup:
-                    await callback.message.edit_text(success_msg, reply_markup=markup, parse_mode="Markdown")
-                else:
-                    await callback.message.edit_text(success_msg, parse_mode="Markdown")
+                await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, success_msg, markup)
                     
                 try:
                     admin_msg = (
@@ -315,7 +337,14 @@ async def process_claimcrypto_callback(callback: CallbackQuery):
                 except Exception:
                     pass
             else:
-                await callback.message.edit_text("❌ Payment not verified. If you have just paid, please wait a few more minutes and click the claim button again.", reply_markup=InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Try Again", callback_data=callback.data)], [InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]]))
+                await safe_edit_rich_message(
+                    bot=callback.bot, chat_id=callback.message.chat.id, message_id=callback.message.message_id,
+                    html_content="<p>❌ Payment not verified. If you have just paid, please wait a few more minutes and click the claim button again.</p>",
+                    reply_markup=InlineKeyboardMarkup(inline_keyboard=[
+                        [InlineKeyboardButton(text="🔄 Try Again", callback_data=callback.data, style="primary")],
+                        [InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")]
+                    ])
+                )
     await callback.answer()
 
 @router.callback_query(F.data.startswith("payother_"))
@@ -331,17 +360,17 @@ async def process_payother_callback(callback: CallbackQuery):
     deep_link = f"https://t.me/chosentwo_bot?start={item_type}_{amount}"
     
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="Contact Support to Pay", url=deep_link)],
+        [InlineKeyboardButton(text="Contact Support to Pay", url=deep_link, style="primary")],
         [InlineKeyboardButton(text="🔙 Back", callback_data="main_menu")]
     ])
     
-    msg = (
-        "💳 <b>Other Payment Methods</b>\n\n"
-        "We accept <b>INR (UPI)</b> payments manually.\n\n"
-        "Please click the button below to contact our support bot to process your payment."
+    msg_html = (
+        "<h3>💳 Other Payment Methods</h3>\n"
+        "<p>We accept <b>INR (UPI)</b> payments manually.</p>\n"
+        "<p>Please click the button below to contact our support bot to process your payment.</p>"
     )
     
-    await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
     await callback.answer()
 
 @router.pre_checkout_query()
@@ -363,6 +392,7 @@ async def process_successful_payment(message: Message):
     username = message.from_user.username or str(user_id)
     stars_amount = payment_info.total_amount # amount in XTR
     
+    markup = None
     if item_type == "gems":
         gems_amount = int(parts[1])
         package_name = f"{gems_amount} Gems"
@@ -373,13 +403,13 @@ async def process_successful_payment(message: Message):
         target_bot = config.TARGET_BOT_USERNAME
         deep_link = f"https://t.me/{target_bot}?start={start_payload}"
         markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link)]
+            [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="primary")]
         ])
         success_msg = (
-            f"✅ Payment successful!\n\n"
-            f"Item: {package_name}\n"
-            f"Payment ID: `{payment_id}`\n\n"
-            f"Click the button below to verify and claim your reward in the Promotion Bot."
+            f"<h3>✅ Payment successful!</h3>\n"
+            f"<p>Item: {package_name}<br>"
+            f"Payment ID: <code>{payment_id}</code></p>\n"
+            f"<p>Click the button below to verify and claim your reward in the Promotion Bot.</p>"
         )
 
     elif item_type == "premium":
@@ -392,13 +422,13 @@ async def process_successful_payment(message: Message):
         target_bot = config.TARGET_BOT_USERNAME
         deep_link = f"https://t.me/{target_bot}?start={start_payload}"
         markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link)]
+            [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="primary")]
         ])
         success_msg = (
-            f"✅ Payment successful!\n\n"
-            f"Item: {package_name}\n"
-            f"Payment ID: `{payment_id}`\n\n"
-            f"Click the button below to verify and claim your reward in the Promotion Bot."
+            f"<h3>✅ Payment successful!</h3>\n"
+            f"<p>Item: {package_name}<br>"
+            f"Payment ID: <code>{payment_id}</code></p>\n"
+            f"<p>Click the button below to verify and claim your reward in the Promotion Bot.</p>"
         )
 
     elif item_type == "groupsub":
@@ -410,18 +440,14 @@ async def process_successful_payment(message: Message):
         extend_group_subscription(user_id, chat_id, duration_days)
         log_local_payment(user_id, payment_id, package_name)
         
-        markup = None
         success_msg = (
-            f"✅ Payment successful!\n\n"
-            f"Item: {package_name}\n"
-            f"Payment ID: `{payment_id}`\n\n"
-            f"Your group subscription is now active! You can now send messages in the group."
+            f"<h3>✅ Payment successful!</h3>\n"
+            f"<p>Item: {package_name}<br>"
+            f"Payment ID: <code>{payment_id}</code></p>\n"
+            f"<p>Your group subscription is now active! You can now send messages in the group.</p>"
         )
 
-    if markup:
-        await message.answer(success_msg, reply_markup=markup, parse_mode="Markdown")
-    else:
-        await message.answer(success_msg, parse_mode="Markdown")
+    await safe_send_rich_message(message.bot, message.chat.id, success_msg, markup)
         
     try:
         admin_msg = (
