@@ -260,7 +260,7 @@ async def clone_pay_crypto(callback: CallbackQuery):
 # ─── Cancel clone invoice ────────────────────────────────────
 @router.callback_query(F.data.startswith("cancelcloneinvoice_"))
 async def cancel_clone_invoice(callback: CallbackQuery):
-    invoice_id = callback.data.split("_")[1]
+    invoice_id = callback.data.replace("cancelcloneinvoice_", "")
 
     try:
         headers = {"x-api-key": config.BSC_API_KEY}

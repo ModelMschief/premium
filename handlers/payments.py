@@ -239,7 +239,7 @@ async def process_cancelinvoice_callback(callback: CallbackQuery):
         await callback.answer("You are banned.", show_alert=True)
         return
         
-    invoice_id = callback.data.split("_")[1]
+    invoice_id = callback.data.replace("cancelinvoice_", "")
     
     try:
         headers = {"x-api-key": config.BSC_API_KEY}
