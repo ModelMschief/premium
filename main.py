@@ -5,6 +5,7 @@ from aiogram.fsm.storage.memory import MemoryStorage
 import config
 from handlers import start, custom_amount, payments, groups, admin, clone
 import bot_manager
+import tasks
 
 logging.basicConfig(level=logging.DEBUG)
 
@@ -30,7 +31,8 @@ async def main():
     # Start all cloned bots and main bot concurrently
     await asyncio.gather(
         dp.start_polling(bot),
-        bot_manager.start_all_cloned_bots()
+        bot_manager.start_all_cloned_bots(),
+        asyncio.create_task(tasks.cleanup_stale_invoices_loop())
     )
 
 if __name__ == "__main__":

@@ -525,3 +525,19 @@ def update_clone_invoice_status(invoice_id: str, status: str):
     cursor.execute('UPDATE clone_crypto_invoices SET status = ? WHERE invoice_id = ?', (status, invoice_id))
     conn.commit()
     conn.close()
+
+def get_stale_crypto_invoices(hours: int = 12):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT invoice_id FROM crypto_invoices WHERE status = ? AND timestamp <= datetime(''now'', ?)', ('pending', f'-{hours} hours'))
+    rows = cursor.fetchall()
+    conn.close()
+    return [row[0] for row in rows]
+
+def get_stale_clone_crypto_invoices(hours: int = 12):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT invoice_id FROM clone_crypto_invoices WHERE status = ? AND created_at <= datetime(''now'', ?)', ('pending', f'-{hours} hours'))
+    rows = cursor.fetchall()
+    conn.close()
+    return [row[0] for row in rows]
