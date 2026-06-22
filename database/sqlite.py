@@ -541,3 +541,34 @@ def get_stale_clone_crypto_invoices(hours: int = 12):
     rows = cursor.fetchall()
     conn.close()
     return [row[0] for row in rows]
+
+def update_cloned_bot_token(old_bot_id: int, new_bot_token: str, new_bot_id: int, new_username: str) -> bool:
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    try:
+        # Verify the old bot exists
+        cursor.execute('SELECT bot_id FROM cloned_bots WHERE bot_id = ?', (old_bot_id,))
+        if not cursor.fetchone():
+            return False
+            
+        # Update cloned_bots table
+        # Since bot_id is the primary key, SQLite allows updating it.
+        cursor.execute('''
+            UPDATE cloned_bots 
+            SET bot_id = ?, bot_token = ?, bot_username = ?
+            WHERE bot_id = ?
+        ''', (new_bot_id, new_bot_token, new_username, old_bot_id))
+        
+        # Update references in other tables
+        cursor.execute('UPDATE connected_groups SET bot_id = ? WHERE bot_id = ?', (new_bot_id, old_bot_id))
+        cursor.execute('UPDATE clone_subscriptions SET bot_id = ? WHERE bot_id = ?', (new_bot_id, old_bot_id))
+        cursor.execute('UPDATE clone_crypto_invoices SET bot_id = ? WHERE bot_id = ?', (new_bot_id, old_bot_id))
+        
+        conn.commit()
+        return True
+    except Exception as e:
+        print(f"Error updating cloned bot token: {e}")
+        conn.rollback()
+        return False
+    finally:
+        conn.close()

@@ -18,6 +18,7 @@ router = Router()
 
 class CloneStates(StatesGroup):
     waiting_for_token = State()
+    waiting_for_new_token = State()
 
 
 # ─── /start clone landing ────────────────────────────────────
@@ -50,10 +51,10 @@ async def show_clone_info(callback: CallbackQuery):
     # Show existing bots
     my_bots = get_cloned_bots_by_owner(callback.from_user.id)
     if my_bots:
-        msg += "\n<b>Your Bots:</b>\n"
+        msg += "\n<b>Your Bots:</b> Click below to manage your bots or replace revoked tokens.\n"
         for b in my_bots:
             status_icon = "🟢" if b["clone_status"] == "active" else "🔴"
-            msg += f"  {status_icon} @{b['bot_username']}\n"
+            buttons.append([InlineKeyboardButton(text=f"{status_icon} Manage @{b['bot_username']}", callback_data=f"manageclone_{b['bot_id']}")])
 
     buttons.append([InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")])
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
@@ -98,6 +99,124 @@ async def clone_cancel(callback: CallbackQuery, state: FSMContext):
     await callback.answer("Cancelled.")
     # Redirect back to clone info
     await show_clone_info(callback)
+
+
+# ─── Manage individual bot ───────────────────────────────────
+@router.callback_query(F.data.startswith("manageclone_"))
+async def manage_clone_bot(callback: CallbackQuery):
+    if await is_banned(callback.from_user.id):
+        await callback.answer("You are banned.", show_alert=True)
+        return
+
+    bot_id = int(callback.data.split("_")[1])
+    from database.sqlite import get_cloned_bot_by_id
+    b = get_cloned_bot_by_id(bot_id)
+    
+    if not b or b["owner_user_id"] != callback.from_user.id:
+        await callback.answer("Bot not found or unauthorized.", show_alert=True)
+        return
+
+    status = "🟢 Active" if b["clone_status"] == "active" else "🔴 Inactive"
+    
+    msg = (
+        f"🤖 <b>Manage Bot: @{b['bot_username']}</b>\n\n"
+        f"<b>ID:</b> <code>{b['bot_id']}</code>\n"
+        f"<b>Status:</b> {status}\n\n"
+        f"<i>Has your bot token been revoked by @BotFather? You can replace the bot token to seamlessly migrate all your groups and balances to a new bot!</i>"
+    )
+
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔄 Change Bot Token", callback_data=f"changetoken_{bot_id}")],
+        [InlineKeyboardButton(text="🔙 Back to Clone Menu", callback_data="show_clone")]
+    ])
+
+    await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
+    await callback.answer()
+
+
+# ─── Change token flow ───────────────────────────────────────
+@router.callback_query(F.data.startswith("changetoken_"))
+async def prompt_change_token(callback: CallbackQuery, state: FSMContext):
+    bot_id = int(callback.data.split("_")[1])
+    await state.set_state(CloneStates.waiting_for_new_token)
+    await state.update_data(change_target_bot_id=bot_id)
+
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Cancel", callback_data="show_clone")]
+    ])
+
+    await callback.message.edit_text(
+        "🔄 <b>Change Bot Token</b>\n\n"
+        "Send me the new <b>API token</b> from @BotFather. This will replace the old bot.\n\n"
+        "⚠️ <b>WARNING:</b> Because this is a brand new bot, you will need to manually re-add the new bot to all your existing premium groups and grant it Admin permissions again! "
+        "Your group settings, packages, and earnings will be perfectly preserved.\n\n"
+        "Send the new token now (e.g. <code>123456:ABCdef...</code>):",
+        reply_markup=markup, parse_mode="HTML"
+    )
+    await callback.answer()
+
+
+@router.message(CloneStates.waiting_for_new_token)
+async def receive_new_token(message: Message, state: FSMContext):
+    token = message.text.strip()
+    data = await state.get_data()
+    old_bot_id = data.get("change_target_bot_id")
+
+    if ":" not in token or len(token) < 20:
+        await message.answer("❌ Invalid token format. Please send a valid BotFather token.", parse_mode="HTML")
+        return
+
+    processing_msg = await message.answer("⏳ Validating new token and migrating data...")
+
+    try:
+        test_bot = Bot(token=token)
+        bot_info = await test_bot.get_me()
+        await test_bot.session.close()
+
+        new_bot_id = bot_info.id
+        new_bot_username = bot_info.username
+
+        from database.sqlite import get_cloned_bot_by_id, update_cloned_bot_token
+        existing = get_cloned_bot_by_id(new_bot_id)
+        if existing and new_bot_id != old_bot_id:
+            await processing_msg.edit_text("❌ This new bot is already registered in our system.", parse_mode="HTML")
+            await state.clear()
+            return
+
+        # Stop old bot if it happens to be running
+        await bot_manager.stop_cloned_bot(old_bot_id)
+
+        # Migrate DB
+        success = update_cloned_bot_token(old_bot_id, token, new_bot_id, new_bot_username)
+        if not success:
+            await processing_msg.edit_text("❌ Failed to migrate database records. Please try again or contact support.")
+            await state.clear()
+            return
+
+        # Start new bot
+        await bot_manager.start_cloned_bot(token, new_bot_id)
+
+        await state.clear()
+
+        markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=f"🤖 Open @{new_bot_username}", url=f"https://t.me/{new_bot_username}")],
+            [InlineKeyboardButton(text="🔙 Back to Clone Menu", callback_data="show_clone")]
+        ])
+
+        await processing_msg.edit_text(
+            f"✅ <b>Bot Token Successfully Changed!</b>\n\n"
+            f"🤖 New Bot: @{new_bot_username}\n"
+            f"🔑 New ID: <code>{new_bot_id}</code>\n\n"
+            f"⚠️ <b>ACTION REQUIRED:</b> You MUST re-add @{new_bot_username} to your connected groups as an Administrator immediately so it can resume managing your memberships!",
+            reply_markup=markup, parse_mode="HTML"
+        )
+
+    except Exception as e:
+        logger.error(f"Change token validation failed: {e}")
+        await processing_msg.edit_text(
+            "❌ <b>Invalid Token</b>\n\n"
+            "The token could not be verified. Please make sure you copied the full token from @BotFather."
+        )
 
 
 # ─── Receive and validate token ──────────────────────────────
