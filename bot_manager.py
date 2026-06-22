@@ -12,6 +12,7 @@ active_bots = {}
 
 async def start_cloned_bot(bot_token: str, bot_id: int):
     """Start a single cloned bot instance with its own Dispatcher."""
+    import importlib
     from handlers import clone_start, clone_payments, clone_groups, owner_dashboard
 
     if bot_id in active_bots:
@@ -21,6 +22,13 @@ async def start_cloned_bot(bot_token: str, bot_id: int):
     try:
         bot = Bot(token=bot_token)
         dp = Dispatcher(storage=MemoryStorage())
+
+        # Reload the modules to get fresh Router instances for this dispatcher
+        # This prevents the 'Router is already attached to Dispatcher' error in Aiogram 3
+        importlib.reload(owner_dashboard)
+        importlib.reload(clone_start)
+        importlib.reload(clone_payments)
+        importlib.reload(clone_groups)
 
         # Register cloned-bot-specific routers
         dp.include_router(owner_dashboard.router)
