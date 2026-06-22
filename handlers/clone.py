@@ -147,9 +147,9 @@ async def prompt_change_token(callback: CallbackQuery, state: FSMContext):
 
     await callback.message.edit_text(
         "🔄 <b>Change Bot Token</b>\n\n"
-        "Send me the new <b>API token</b> from @BotFather. This will replace the old bot.\n\n"
-        "⚠️ <b>WARNING:</b> Because this is a brand new bot, you will need to manually re-add the new bot to all your existing premium groups and grant it Admin permissions again! "
-        "Your group settings, packages, and earnings will be perfectly preserved.\n\n"
+        "Send me the new <b>API token</b> from @BotFather. This will replace your old token.\n\n"
+        "⚠️ <b>Note:</b> If you just revoked the token for the <i>same</i> bot, everything will instantly resume working once you send the new token. "
+        "However, if you send a token for a <i>completely different</i> bot, you will need to manually re-add that new bot to your groups as an Admin!\n\n"
         "Send the new token now (e.g. <code>123456:ABCdef...</code>):",
         reply_markup=markup, parse_mode="HTML"
     )
@@ -203,13 +203,22 @@ async def receive_new_token(message: Message, state: FSMContext):
             [InlineKeyboardButton(text="🔙 Back to Clone Menu", callback_data="show_clone")]
         ])
 
-        await processing_msg.edit_text(
-            f"✅ <b>Bot Token Successfully Changed!</b>\n\n"
-            f"🤖 New Bot: @{new_bot_username}\n"
-            f"🔑 New ID: <code>{new_bot_id}</code>\n\n"
-            f"⚠️ <b>ACTION REQUIRED:</b> You MUST re-add @{new_bot_username} to your connected groups as an Administrator immediately so it can resume managing your memberships!",
-            reply_markup=markup, parse_mode="HTML"
-        )
+        if new_bot_id == old_bot_id:
+            msg_text = (
+                f"✅ <b>Bot Token Successfully Updated!</b>\n\n"
+                f"🤖 Bot: @{new_bot_username}\n\n"
+                f"Since you just revoked and updated the token for your existing bot, everything will instantly resume working! "
+                f"You do <b>NOT</b> need to re-add the bot to your groups."
+            )
+        else:
+            msg_text = (
+                f"✅ <b>Bot Successfully Replaced!</b>\n\n"
+                f"🤖 New Bot: @{new_bot_username}\n"
+                f"🔑 New ID: <code>{new_bot_id}</code>\n\n"
+                f"⚠️ <b>ACTION REQUIRED:</b> Because this is a brand new bot, you MUST manually re-add @{new_bot_username} to your connected groups as an Administrator immediately so it can resume managing your memberships!"
+            )
+
+        await processing_msg.edit_text(msg_text, reply_markup=markup, parse_mode="HTML")
 
     except Exception as e:
         logger.error(f"Change token validation failed: {e}")
