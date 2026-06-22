@@ -4,7 +4,7 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
-from database.sqlite import extend_group_subscription, log_local_payment
+from database.sqlite import extend_group_subscription, log_local_payment, get_system_stats
 import config
 
 router = Router()
@@ -123,9 +123,27 @@ async def process_duration(message: Message, state: FSMContext, bot: Bot):
          await message.answer(f"⚠️ Could not send private notification to the user: {e}")
 
 @router.callback_query(F.data == "admin_cancel")
-async def cancel_admin_action(callback: CallbackQuery, state: FSMContext):
+async def cancel_admin(callback: CallbackQuery, state: FSMContext):
     if callback.from_user.id != config.ADMIN_ID:
         return
     await state.clear()
-    await callback.message.edit_text("Admin action cancelled.")
+    await callback.message.edit_text("Operation cancelled.")
     await callback.answer()
+
+
+@router.message(Command("stats"))
+async def cmd_stats(message: Message, bot: Bot):
+    if message.from_user.id != config.ADMIN_ID:
+        return  # Ignore silently for non-admins
+
+    stats = get_system_stats()
+    
+    msg_html = (
+        f"<b>📊 Global System Statistics</b>\n\n"
+        f"🤖 <b>Clone Bots:</b> {stats['clone_bots']}\n"
+        f"👥 <b>Total Users:</b> {stats['users']}\n"
+        f"📢 <b>Connected Groups:</b> {stats['groups']}\n"
+        f"💰 <b>Total Payments:</b> {stats['payments']}\n"
+    )
+    
+    await message.answer(msg_html, parse_mode="HTML")

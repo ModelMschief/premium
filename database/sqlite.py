@@ -615,5 +615,54 @@ def update_cloned_bot_token(old_bot_id: int, new_bot_token: str, new_bot_id: int
         print(f"Error updating cloned bot token: {e}")
         conn.rollback()
         return False
+        conn.close()
+
+# ─── System Stats ────────────────────────────────────────
+
+def get_system_stats() -> dict:
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    try:
+        # Clone bots count
+        cursor.execute("SELECT COUNT(*) FROM cloned_bots")
+        clone_bots = cursor.fetchone()[0]
+        
+        # Connected groups count
+        cursor.execute("SELECT COUNT(*) FROM connected_groups")
+        groups = cursor.fetchone()[0]
+        
+        # Total users (estimated by distinct IDs across tables)
+        cursor.execute("""
+            SELECT COUNT(DISTINCT user_id) FROM (
+                SELECT user_id FROM user_languages
+                UNION SELECT user_id FROM payments
+                UNION SELECT user_id FROM clone_subscriptions
+                UNION SELECT owner_user_id FROM cloned_bots
+            )
+        """)
+        users = cursor.fetchone()[0]
+        
+        # Total payments (XTR + completed crypto)
+        cursor.execute("SELECT COUNT(*) FROM payments")
+        xtr_payments = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM crypto_invoices WHERE status='completed'")
+        crypto_payments = cursor.fetchone()[0]
+        
+        cursor.execute("SELECT COUNT(*) FROM clone_crypto_invoices WHERE status='completed'")
+        clone_crypto_payments = cursor.fetchone()[0]
+        
+        total_payments = xtr_payments + crypto_payments + clone_crypto_payments
+        
+        return {
+            "clone_bots": clone_bots,
+            "groups": groups,
+            "users": users,
+            "payments": total_payments
+        }
+    except Exception as e:
+        print(f"Error fetching system stats: {e}")
+        return {"clone_bots": 0, "groups": 0, "users": 0, "payments": 0}
     finally:
         conn.close()
