@@ -78,7 +78,8 @@ async def group_message_handler(message: Message, bot: Bot):
             
             deep_link = f"https://t.me/{bot_username}?start=subs_{chat_id}"
             markup = InlineKeyboardMarkup(inline_keyboard=[
-                [InlineKeyboardButton(text="💎 Subscribe Now", url=deep_link,style="primary")]
+                [InlineKeyboardButton(text="💎 Subscribe Now", url=deep_link,style="primary")],
+                [InlineKeyboardButton(text="🤖Get Your Own Bot FREE!", url=f"https://t.me/{bot_username}?start=clone")]
             ])
             
             warning_text = (
