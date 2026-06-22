@@ -311,7 +311,7 @@ async def process_claimcrypto_callback(callback: CallbackQuery):
                     
                     target_bot = config.TARGET_BOT_USERNAME
                     deep_link = f"https://t.me/{target_bot}?start={start_payload}"
-                    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="primary")]])
+                    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="success")]])
                     success_msg = f"<h3>✅ Payment successful!</h3>\n<p>Item: {package_name}<br>Payment ID: <code>{payment_id}</code></p>\n<p>Click the button below to verify and claim your reward in the Promotion Bot.</p>"
                 elif item_type == "premium":
                     await save_premium_payment(payment_id, user_id, username, package_name, duration_days, stars_amount)
@@ -320,7 +320,7 @@ async def process_claimcrypto_callback(callback: CallbackQuery):
                     
                     target_bot = config.TARGET_BOT_USERNAME
                     deep_link = f"https://t.me/{target_bot}?start={start_payload}"
-                    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="primary")]])
+                    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="success")]])
                     success_msg = f"<h3>✅ Payment successful!</h3>\n<p>Item: {package_name}<br>Payment ID: <code>{payment_id}</code></p>\n<p>Click the button below to verify and claim your reward in the Promotion Bot.</p>"
                 elif item_type == "groupsub":
                     extend_group_subscription(user_id, chat_id, duration_days)
@@ -406,7 +406,7 @@ async def process_successful_payment(message: Message):
         target_bot = config.TARGET_BOT_USERNAME
         deep_link = f"https://t.me/{target_bot}?start={start_payload}"
         markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="primary")]
+            [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="success")]
         ])
         success_msg = (
             f"<h3>✅ Payment successful!</h3>\n"
@@ -425,7 +425,7 @@ async def process_successful_payment(message: Message):
         target_bot = config.TARGET_BOT_USERNAME
         deep_link = f"https://t.me/{target_bot}?start={start_payload}"
         markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="primary")]
+            [InlineKeyboardButton(text="Verify Payment & Claim", url=deep_link, style="success")]
         ])
         success_msg = (
             f"<h3>✅ Payment successful!</h3>\n"

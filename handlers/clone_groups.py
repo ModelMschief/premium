@@ -15,7 +15,7 @@ router = Router()
 def get_viral_button() -> list:
     main_bot = config.MAIN_BOT_USERNAME
     if main_bot:
-        return [InlineKeyboardButton(text="🤖 Get Your Own Premium Group Bot — FREE!", url=f"https://t.me/{main_bot}?start=clone")]
+        return [InlineKeyboardButton(text="🤖Get Your Own Bot FREE!", url=f"https://t.me/{main_bot}?start=clone")]
     return []
 
 
@@ -111,7 +111,7 @@ async def clone_group_message_filter(message: Message):
     subscribe_url = f"https://t.me/{bot_username}?start=sub_{group_id}"
 
     buttons = [
-        [InlineKeyboardButton(text="📲 Subscribe Now", url=subscribe_url)]
+        [InlineKeyboardButton(text="💎 Get Premium Access", url=subscribe_url, style="primary")]
     ]
     viral = get_viral_button()
     if viral:
@@ -121,9 +121,10 @@ async def clone_group_message_filter(message: Message):
 
     try:
         warning_msg = await message.answer(
-            f"⚠️ <a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>, "
-            f"you need an <b>active subscription</b> to send messages in this group.\n\n"
-            f"Click below to subscribe!",
+            f"🔒 <a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>, this is a restricted premium community.\n\n"
+            f"To unlock chat privileges and become one of our privileged members, you need an <b>active subscription</b>. "
+            f"Join our exclusive ranks and gain full access today!\n\n"
+            f"Click below to secure your spot.",
             reply_markup=markup,
             parse_mode="HTML"
         )

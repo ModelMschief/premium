@@ -19,7 +19,7 @@ router = Router()
 def get_viral_button() -> list:
     main_bot = config.MAIN_BOT_USERNAME
     if main_bot:
-        return [InlineKeyboardButton(text="🤖 Get Your Own Premium Group Bot — FREE!", url=f"https://t.me/{main_bot}?start=clone")]
+        return [InlineKeyboardButton(text="🤖Get Your Own Bot FREE!", url=f"https://t.me/{main_bot}?start=clone")]
     return []
 
 # ═══════════════════════════════════════════════════════════════

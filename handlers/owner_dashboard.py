@@ -47,7 +47,7 @@ async def owner_connect_group(callback: CallbackQuery):
 
     bot_info = await callback.bot.get_me()
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Back to Dashboard", callback_data="clone_main_menu")]
+        [InlineKeyboardButton(text="🔙 Back to Dashboard", callback_data="clone_main_menu", style="primary")]
     ])
 
     await callback.message.edit_text(
@@ -105,7 +105,7 @@ async def owner_manage_groups(callback: CallbackQuery):
     if not groups:
         markup = InlineKeyboardMarkup(inline_keyboard=[
             [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group", style="primary")],
-            [InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")]
+            [InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu", style="primary")]
         ])
         await callback.message.edit_text(
             "📋 <b>No Groups Connected</b>\n\n"
@@ -123,7 +123,7 @@ async def owner_manage_groups(callback: CallbackQuery):
             callback_data=f"owner_group_{g['group_id']}",
             style="primary"
         )])
-    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")])
+    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu", style="primary")])
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     await callback.message.edit_text(
@@ -160,7 +160,7 @@ async def owner_group_detail(callback: CallbackQuery):
                 InlineKeyboardButton(text=f"✏️ Edit {pkg['duration_days']}d", callback_data=f"owner_editpkg_{pkg['package_id']}", style="primary"),
                 InlineKeyboardButton(text=f"🗑 Del {pkg['duration_days']}d", callback_data=f"owner_delpkg_{pkg['package_id']}_{group_id}", style="primary")
             ])
-    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="owner_manage_groups")])
+    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="owner_manage_groups", style="primary")])
 
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
     await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
@@ -179,7 +179,7 @@ async def owner_add_package(callback: CallbackQuery, state: FSMContext):
     await state.set_state(OwnerStates.waiting_for_package)
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Cancel", callback_data=f"owner_group_{group_id}")]
+        [InlineKeyboardButton(text="🔙 Cancel", callback_data=f"owner_group_{group_id}", style="primary")]
     ])
 
     await callback.message.edit_text(
@@ -259,7 +259,7 @@ async def owner_edit_package(callback: CallbackQuery, state: FSMContext):
     await state.set_state(OwnerStates.waiting_for_edit_package)
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Cancel", callback_data=f"owner_group_{pkg['group_id']}")]
+        [InlineKeyboardButton(text="🔙 Cancel", callback_data=f"owner_group_{pkg['group_id']}", style="primary")]
     ])
 
     await callback.message.edit_text(
@@ -320,7 +320,7 @@ async def owner_wallet(callback: CallbackQuery):
     ]
     if balance["balance_usdt"] > 0 and balance["withdrawal_address"]:
         buttons.append([InlineKeyboardButton(text=f"💸 Withdraw ${balance['balance_usdt']:.2f}", callback_data="owner_withdraw_confirm", style="primary")])
-    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")])
+    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu", style="primary")])
 
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -345,7 +345,7 @@ async def owner_set_wallet(callback: CallbackQuery, state: FSMContext):
     await state.set_state(OwnerStates.waiting_for_wallet_address)
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Cancel", callback_data="owner_wallet")]
+        [InlineKeyboardButton(text="🔙 Cancel", callback_data="owner_wallet", style="primary")]
     ])
 
     await callback.message.edit_text(
@@ -396,8 +396,8 @@ async def owner_withdraw_confirm(callback: CallbackQuery):
         return
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text=f"✅ Confirm Withdraw ${balance['balance_usdt']:.2f}", callback_data="owner_withdraw_execute", style="primary")],
-        [InlineKeyboardButton(text="🔙 Cancel", callback_data="owner_wallet")]
+        [InlineKeyboardButton(text=f"✅ Confirm Withdraw ${balance['balance_usdt']:.2f}", callback_data="owner_withdraw_execute", style="success")],
+        [InlineKeyboardButton(text="🔙 Cancel", callback_data="owner_wallet", style="primary")]
     ])
 
     await callback.message.edit_text(
@@ -449,7 +449,7 @@ async def owner_withdraw_execute(callback: CallbackQuery):
                     complete_withdrawal(withdrawal_id, tx_hash)
 
                     markup = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="🔙 Back to Wallet", callback_data="owner_wallet")]
+                        [InlineKeyboardButton(text="🔙 Back to Wallet", callback_data="owner_wallet", style="primary")]
                     ])
 
                     await callback.message.edit_text(
@@ -482,7 +482,7 @@ async def owner_withdraw_execute(callback: CallbackQuery):
                     fail_withdrawal(withdrawal_id)
 
                     markup = InlineKeyboardMarkup(inline_keyboard=[
-                        [InlineKeyboardButton(text="🔙 Back to Wallet", callback_data="owner_wallet")]
+                        [InlineKeyboardButton(text="🔙 Back to Wallet", callback_data="owner_wallet", style="primary")]
                     ])
 
                     await callback.message.edit_text(
