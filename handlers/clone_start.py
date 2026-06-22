@@ -170,7 +170,7 @@ async def show_group_subscription(message_or_callback, group_id: int, bot_id: in
     buttons = []
     table_html = f"<table border=\"1\"><tr><th>{t('TABLE_DURATION', lang)}</th><th>{t('TABLE_STARS', lang)}</th><th>{t('TABLE_USDT', lang)}</th></tr>"
     for pkg in packages:
-        table_html += f"<tr><td>{pkg['duration_days']} {'Days' if lang == 'en' else 'Days'}</td><td>{pkg['stars_price']} ⭐️</td><td>{pkg['usdt_price']} USDT</td></tr>"
+        table_html += f"<tr><td>{pkg['duration_days']} {'Days' if lang == 'en' else 'Days'}</td><td>{pkg['stars_price']} ⭐️</td><td>{pkg['usdt_price']} USDT (BEP20)</td></tr>"
         buttons.append([InlineKeyboardButton(
             text=t("CLONE_SUB_SELECT", lang).format(days=pkg['duration_days']),
             callback_data=f"clonebuy_{group_id}_{pkg['package_id']}",

@@ -45,7 +45,7 @@ async def clone_buy_package(callback: CallbackQuery):
             style="primary"
         )],
         [InlineKeyboardButton(
-            text=f"🪙 Pay {pkg['usdt_price']} USDT",
+            text=f"🪙 Pay {pkg['usdt_price']} USDT (BEP20)",
             callback_data=f"clonepaycrypto_{group_id}_{package_id}",
             style="primary"
         )],
@@ -56,7 +56,7 @@ async def clone_buy_package(callback: CallbackQuery):
         f"<h3>🥇 Payment Selection</h3>\n"
         f"<ul>"
         f"<li>📦 <b>{pkg['duration_days']} Days</b> Access</li>"
-        f"<li>⭐️ {pkg['stars_price']} Stars / 🪙 {pkg['usdt_price']} USDT</li>"
+        f"<li>⭐️ {pkg['stars_price']} Stars / 🪙 {pkg['usdt_price']} USDT (BEP20)</li>"
         f"</ul>"
         f"<p><i>Choose your preferred payment method:</i></p>"
     )
