@@ -13,7 +13,7 @@ active_bots = {}
 async def start_cloned_bot(bot_token: str, bot_id: int):
     """Start a single cloned bot instance with its own Dispatcher."""
     import importlib
-    from handlers import clone_start, clone_payments, clone_groups, owner_dashboard
+    from handlers import clone_start, clone_payments, clone_groups, owner_dashboard, language as language_mod
 
     if bot_id in active_bots:
         logger.warning(f"Bot {bot_id} is already running, skipping.")
@@ -25,12 +25,14 @@ async def start_cloned_bot(bot_token: str, bot_id: int):
 
         # Reload the modules to get fresh Router instances for this dispatcher
         # This prevents the 'Router is already attached to Dispatcher' error in Aiogram 3
+        importlib.reload(language_mod)
         importlib.reload(owner_dashboard)
         importlib.reload(clone_start)
         importlib.reload(clone_payments)
         importlib.reload(clone_groups)
 
         # Register cloned-bot-specific routers
+        dp.include_router(language_mod.router)   # Must be first to catch setlang_ callbacks
         dp.include_router(owner_dashboard.router)
         dp.include_router(clone_start.router)
         dp.include_router(clone_payments.router)

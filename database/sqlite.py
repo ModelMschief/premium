@@ -117,8 +117,53 @@ def init_db():
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS user_languages (
+            user_id INTEGER PRIMARY KEY,
+            lang_code TEXT DEFAULT 'en'
+        )
+    ''')
+    # Safe migration: add lang_code to connected_groups if it doesn't exist
+    try:
+        cursor.execute("ALTER TABLE connected_groups ADD COLUMN lang_code TEXT DEFAULT 'en'")
+    except Exception:
+        pass  # Column already exists
     conn.commit()
     conn.close()
+
+def get_user_lang(user_id: int):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT lang_code FROM user_languages WHERE user_id = ?', (user_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else None  # None = not set yet
+
+def set_user_lang(user_id: int, lang_code: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO user_languages (user_id, lang_code) VALUES (?, ?)
+        ON CONFLICT(user_id) DO UPDATE SET lang_code = excluded.lang_code
+    ''', (user_id, lang_code))
+    conn.commit()
+    conn.close()
+
+def get_group_lang(group_id: int) -> str:
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT lang_code FROM connected_groups WHERE group_id = ?', (group_id,))
+    row = cursor.fetchone()
+    conn.close()
+    return row[0] if row else 'en'
+
+def set_group_lang(group_id: int, lang_code: str):
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute("UPDATE connected_groups SET lang_code = ? WHERE group_id = ?", (lang_code, group_id))
+    conn.commit()
+    conn.close()
+
 
 def log_local_payment(user_id: int, payment_id: str, package_name: str):
     conn = sqlite3.connect(DB_PATH)

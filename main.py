@@ -4,6 +4,7 @@ from aiogram import Bot, Dispatcher
 from aiogram.fsm.storage.memory import MemoryStorage
 import config
 from handlers import start, custom_amount, payments, groups, admin, clone
+from handlers import language as language_handler
 import bot_manager
 import tasks
 
@@ -18,6 +19,7 @@ async def main():
     config.MAIN_BOT_USERNAME = bot_info.username
 
     # Register main bot routers
+    dp.include_router(language_handler.router)  # Must be first to catch setlang_ callbacks
     dp.include_router(start.router)
     dp.include_router(clone.router)
     dp.include_router(custom_amount.router)

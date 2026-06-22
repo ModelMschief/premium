@@ -8,12 +8,15 @@ from database.sqlite import (
     remove_connected_group, get_group_packages, add_group_package,
     delete_group_package, get_group_package_by_id, update_group_package,
     get_creator_balance, set_withdrawal_address, debit_creator_balance,
-    create_withdrawal, complete_withdrawal, fail_withdrawal
+    create_withdrawal, complete_withdrawal, fail_withdrawal,
+    set_group_lang
 )
 import config
 import aiohttp
 import shortuuid
 import logging
+from locales import t, LANG_NAMES
+from handlers.language import build_lang_picker_markup
 
 logger = logging.getLogger(__name__)
 
@@ -153,6 +156,7 @@ async def owner_group_detail(callback: CallbackQuery):
 
     buttons = [
         [InlineKeyboardButton(text="➕ Add Package", callback_data=f"owner_addpkg_{group_id}", style="primary")],
+        [InlineKeyboardButton(text=t("BTN_SET_GROUP_LANG", "en"), callback_data=f"owner_setlang_{group_id}", style="primary")],
     ]
     if packages:
         for pkg in packages:
@@ -496,4 +500,54 @@ async def owner_withdraw_execute(callback: CallbackQuery):
         fail_withdrawal(withdrawal_id)
         await callback.message.edit_text("❌ Withdrawal failed due to a network error. Please try again.")
 
+
+
+# ─── Set group language ────────────────────────────────────
+@router.callback_query(F.data.startswith("owner_setlang_"))
+async def owner_set_group_lang_picker(callback: CallbackQuery):
+    if not await is_owner(callback):
+        await callback.answer("Only the bot owner can access this.", show_alert=True)
+        return
+
+    group_id = int(callback.data.split("_")[2])
+
+    # Build a special lang picker that encodes the group_id
+    items = list(LANG_NAMES.items())
+    buttons = []
+    for i in range(0, len(items), 2):
+        row = []
+        for code, label in items[i:i+2]:
+            row.append(InlineKeyboardButton(text=label, callback_data=f"owner_savelang_{group_id}_{code}"))
+        buttons.append(row)
+    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data=f"owner_group_{group_id}", style="primary")])
+    markup = InlineKeyboardMarkup(inline_keyboard=buttons)
+
+    await callback.message.edit_text(
+        f"<b>🌐 Set Group Language</b>\n\nSelect the language for messages sent in this group.",
+        reply_markup=markup, parse_mode="HTML"
+    )
     await callback.answer()
+
+
+@router.callback_query(F.data.startswith("owner_savelang_"))
+async def owner_save_group_lang(callback: CallbackQuery):
+    if not await is_owner(callback):
+        await callback.answer("Only the bot owner can access this.", show_alert=True)
+        return
+
+    parts = callback.data.split("_")
+    # format: owner_savelang_{group_id}_{lang_code}
+    group_id = int(parts[2])
+    lang_code = parts[3]
+
+    if lang_code not in LANG_NAMES:
+        await callback.answer("Unknown language.", show_alert=True)
+        return
+
+    set_group_lang(group_id, lang_code)
+    lang_name = LANG_NAMES[lang_code]
+    await callback.answer(f"✅ Group language set to {lang_name}!", show_alert=True)
+
+    # Go back to group detail
+    callback.data = f"owner_group_{group_id}"
+    await owner_group_detail(callback)

@@ -4,8 +4,9 @@ import datetime
 from aiogram import Router, F
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.filters import Command
-from database.sqlite import get_connected_group, get_clone_subscription, get_cloned_bot_by_id, add_connected_group
+from database.sqlite import get_connected_group, get_clone_subscription, get_cloned_bot_by_id, add_connected_group, get_group_lang, get_user_lang
 import config
+from locales import t
 
 logger = logging.getLogger(__name__)
 
@@ -17,6 +18,16 @@ def get_viral_button() -> list:
     if main_bot:
         return [InlineKeyboardButton(text="🤖Get Your Own Bot FREE!", url=f"https://t.me/{main_bot}?start=clone")]
     return []
+
+
+def _resolve_lang(user_id: int, group_id: int = None) -> str:
+    """Group lang overrides user lang overrides English."""
+    if group_id:
+        gl = get_group_lang(group_id)
+        if gl and gl != "en":
+            return gl
+    ul = get_user_lang(user_id)
+    return ul if ul else "en"
 
 
 @router.message(Command("connect"))
@@ -106,12 +117,13 @@ async def clone_group_message_filter(message: Message):
         logger.warning(f"Failed to delete message in {group_id}: {e}")
         return
 
-    # Send warning with subscribe button
+    # Send warning with subscribe button — in the group's language
     bot_username = bot_info.username
     subscribe_url = f"https://t.me/{bot_username}?start=sub_{group_id}"
+    lang = _resolve_lang(user_id, group_id)
 
     buttons = [
-        [InlineKeyboardButton(text="💎 Get Premium Access", url=subscribe_url, style="primary")]
+        [InlineKeyboardButton(text=t("GROUP_KICK_BTN", lang), url=subscribe_url, style="primary")]
     ]
     viral = get_viral_button()
     if viral:
@@ -121,10 +133,7 @@ async def clone_group_message_filter(message: Message):
 
     try:
         warning_msg = await message.answer(
-            f"🔒 <a href='tg://user?id={user_id}'>{message.from_user.first_name}</a>, this is a restricted premium community.\n\n"
-            f"To unlock chat privileges and become one of our privileged members, you need an <b>active subscription</b>. "
-            f"Join our exclusive ranks and gain full access today!\n\n"
-            f"Click below to secure your spot.",
+            t("GROUP_KICK_MSG", lang).format(user_id=user_id, name=message.from_user.first_name),
             reply_markup=markup,
             parse_mode="HTML"
         )

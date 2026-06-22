@@ -3,13 +3,16 @@ from aiogram.filters import CommandStart, CommandObject
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
 from database.sqlite import (
     get_cloned_bot_by_id, get_connected_groups, get_group_packages,
-    get_clone_subscription
+    get_clone_subscription, get_user_lang, get_group_lang
 )
 import config
 import datetime
 from rich_utils import safe_send_rich_message, safe_edit_rich_message
+from locales import t
+from handlers.language import build_lang_picker_markup
 
 router = Router()
+
 
 def get_viral_button() -> list:
     """Returns the viral growth button that appears on every screen."""
@@ -17,6 +20,17 @@ def get_viral_button() -> list:
     if main_bot:
         return [InlineKeyboardButton(text="🤖Get Your Own Bot FREE!", url=f"https://t.me/{main_bot}?start=clone")]
     return []
+
+
+def _resolve_lang(user_id: int, group_id: int = None) -> str:
+    """Resolve language: group lang → user lang → English."""
+    if group_id:
+        gl = get_group_lang(group_id)
+        if gl and gl != "en":
+            return gl
+    ul = get_user_lang(user_id)
+    return ul if ul else "en"
+
 
 @router.message(CommandStart())
 async def clone_cmd_start(message: Message, command: CommandObject):
@@ -36,6 +50,15 @@ async def clone_cmd_start(message: Message, command: CommandObject):
         await show_owner_dashboard(message, bot_id, bot_info.username)
         return
 
+    # ─── First-time user: show language picker ───────────
+    if get_user_lang(user_id) is None:
+        await safe_send_rich_message(
+            message.bot, message.chat.id,
+            "<h2>🌐 Select Language / Выберите язык / 语言选择</h2>",
+            build_lang_picker_markup("setlang")
+        )
+        return
+
     # ─── Handle /start sub_{group_id} ────────────────────
     args = command.args
     if args and args.startswith("sub_"):
@@ -49,6 +72,7 @@ async def clone_cmd_start(message: Message, command: CommandObject):
         return
 
     # ─── Regular user — show available groups ────────────
+    lang = _resolve_lang(user_id)
     groups = get_connected_groups(bot_id)
 
     if not groups:
@@ -57,11 +81,10 @@ async def clone_cmd_start(message: Message, command: CommandObject):
         if viral:
             buttons.append(viral)
         markup = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
-        
+
         msg_html = (
-            "<h3>👋 Welcome!</h3>\n"
-            "<p>This bot manages premium group subscriptions.</p>\n"
-            "<p>No groups are configured yet. Please check back later!</p>"
+            f"<h3>{t('CLONE_WELCOME_TITLE', lang)}</h3>\n"
+            f"{t('CLONE_NO_GROUPS', lang)}"
         )
         await safe_send_rich_message(message.bot, message.chat.id, msg_html, markup)
         return
@@ -81,10 +104,11 @@ async def clone_cmd_start(message: Message, command: CommandObject):
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     msg_html = (
-        "<h3>👋 Welcome!</h3>\n"
-        "<p>Select a group below to view subscription options and gain access to premium content.</p>"
+        f"<h3>{t('CLONE_WELCOME_TITLE', lang)}</h3>\n"
+        f"{t('CLONE_WELCOME_BODY', lang)}"
     )
     await safe_send_rich_message(message.bot, message.chat.id, msg_html, markup)
+
 
 async def show_owner_dashboard(message: Message, bot_id: int, bot_username: str):
     """Show the owner's management dashboard."""
@@ -107,20 +131,23 @@ async def show_owner_dashboard(message: Message, bot_id: int, bot_username: str)
     )
     await safe_send_rich_message(message.bot, message.chat.id, msg_html, markup)
 
+
 async def show_group_subscription(message_or_callback, group_id: int, bot_id: int, bot_username: str):
     """Show subscription packages for a specific group to a regular user."""
     packages = get_group_packages(group_id)
+    user_id = message_or_callback.from_user.id
+    lang = _resolve_lang(user_id, group_id)
 
     if not packages:
         viral = get_viral_button()
-        buttons = [[InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")]]
+        buttons = [[InlineKeyboardButton(text=t("BTN_BACK_CLONE_MENU", lang), callback_data="clone_main_menu")]]
         if viral:
             buttons.append(viral)
         markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
         msg_html = (
-            "<h3>📦 No Packages Available</h3>\n"
-            "<p>The group owner hasn't configured any subscription packages yet.</p>"
+            f"<h3>{t('CLONE_NO_PACKAGES_TITLE', lang)}</h3>\n"
+            f"{t('CLONE_NO_PACKAGES_BODY', lang)}"
         )
         if isinstance(message_or_callback, Message):
             await safe_send_rich_message(message_or_callback.bot, message_or_callback.chat.id, msg_html, markup)
@@ -129,7 +156,6 @@ async def show_group_subscription(message_or_callback, group_id: int, bot_id: in
         return
 
     # Check current subscription
-    user_id = message_or_callback.from_user.id
     sub_expiry = get_clone_subscription(user_id, group_id)
     sub_status = ""
     if sub_expiry:
@@ -137,22 +163,22 @@ async def show_group_subscription(message_or_callback, group_id: int, bot_id: in
         now = datetime.datetime.now(datetime.timezone.utc)
         if expiry_dt > now:
             remaining = (expiry_dt - now).days
-            sub_status = f"<p>✅ <b>Active subscription:</b> {remaining} days remaining</p>\n"
+            sub_status = f"<p>{t('CLONE_SUB_ACTIVE', lang).format(days=remaining)}</p>\n"
         else:
-            sub_status = "<p>⚠️ <b>Subscription expired.</b> Renew below!</p>\n"
+            sub_status = f"<p>{t('CLONE_SUB_EXPIRED', lang)}</p>\n"
 
     buttons = []
-    table_html = "<table border=\"1\"><tr><th>Duration</th><th>Stars</th><th>USDT</th></tr>"
+    table_html = f"<table border=\"1\"><tr><th>{t('TABLE_DURATION', lang)}</th><th>{t('TABLE_STARS', lang)}</th><th>{t('TABLE_USDT', lang)}</th></tr>"
     for pkg in packages:
-        table_html += f"<tr><td>{pkg['duration_days']} Days</td><td>{pkg['stars_price']} ⭐️</td><td>{pkg['usdt_price']} USDT</td></tr>"
+        table_html += f"<tr><td>{pkg['duration_days']} {'Days' if lang == 'en' else 'Days'}</td><td>{pkg['stars_price']} ⭐️</td><td>{pkg['usdt_price']} USDT</td></tr>"
         buttons.append([InlineKeyboardButton(
-            text=f"💎 Select {pkg['duration_days']} Days Plan",
+            text=t("CLONE_SUB_SELECT", lang).format(days=pkg['duration_days']),
             callback_data=f"clonebuy_{group_id}_{pkg['package_id']}",
             style="primary"
         )])
     table_html += "</table>"
 
-    buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data="clone_main_menu")])
+    buttons.append([InlineKeyboardButton(text=t("BTN_BACK_CLONE_MENU", lang), callback_data="clone_main_menu")])
     viral = get_viral_button()
     if viral:
         buttons.append(viral)
@@ -160,10 +186,10 @@ async def show_group_subscription(message_or_callback, group_id: int, bot_id: in
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     msg_html = (
-        f"<h3>📦 Subscription Packages</h3>\n"
+        f"<h3>{t('CLONE_SUB_PACKAGES_TITLE', lang)}</h3>\n"
         f"{sub_status}"
         f"{table_html}\n"
-        f"<p>Select a package to purchase access:</p>"
+        f"{t('CLONE_SUB_FOOTER', lang)}"
     )
 
     if isinstance(message_or_callback, Message):
@@ -192,8 +218,11 @@ async def clone_main_menu(callback: CallbackQuery):
         await callback.answer("Bot not configured.", show_alert=True)
         return
 
+    user_id = callback.from_user.id
+    lang = _resolve_lang(user_id)
+
     # Check if owner
-    if callback.from_user.id == clone_data["owner_user_id"]:
+    if user_id == clone_data["owner_user_id"]:
         groups = get_connected_groups(bot_id)
         group_count = len(groups)
         markup = InlineKeyboardMarkup(inline_keyboard=[
@@ -225,8 +254,8 @@ async def clone_main_menu(callback: CallbackQuery):
         markup = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
 
         msg_html = (
-            "<h3>👋 Welcome!</h3>\n"
-            "<p>Select a group below to view subscription options.</p>"
+            f"<h3>{t('CLONE_WELCOME_TITLE', lang)}</h3>\n"
+            f"{t('CLONE_WELCOME_BODY', lang)}"
         )
         await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
     await callback.answer()
