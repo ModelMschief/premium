@@ -551,3 +551,31 @@ async def owner_save_group_lang(callback: CallbackQuery):
     # Go back to group detail
     callback.data = f"owner_group_{group_id}"
     await owner_group_detail(callback)
+
+
+# ─── Group Commands Help ──────────────────────────────────────
+@router.callback_query(F.data == "owner_group_commands")
+async def owner_group_commands(callback: CallbackQuery):
+    if not await is_owner(callback):
+        await callback.answer("Only the bot owner can access this.", show_alert=True)
+        return
+
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Back to Dashboard", callback_data="clone_main_menu", style="primary")]
+    ])
+
+    help_text = (
+        "<b>⚙️ Group Commands Guide</b>\n\n"
+        "Use these commands inside your connected groups:\n\n"
+        "<b>/connect</b>\n"
+        "└ Connect the group to your bot. The bot must be an admin first.\n\n"
+        "<b>/white @username</b> (or reply to a message)\n"
+        "└ Add a user to the whitelist. They can chat freely without a subscription.\n\n"
+        "<b>/black @username</b> (or reply to a message)\n"
+        "└ Remove a user from the whitelist. They will need a subscription again.\n\n"
+        "<i>💡 Group admins and the group owner are always allowed to chat freely — no need to whitelist them.</i>\n\n"
+        "<i>⏱ Command messages auto-delete after 5 minutes to keep the group clean.</i>"
+    )
+
+    await callback.message.edit_text(help_text, reply_markup=markup, parse_mode="HTML")
+    await callback.answer()

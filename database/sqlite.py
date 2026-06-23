@@ -123,6 +123,14 @@ def init_db():
             lang_code TEXT DEFAULT 'en'
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clone_group_whitelist (
+            group_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            bot_id INTEGER NOT NULL,
+            PRIMARY KEY (group_id, user_id)
+        )
+    ''')
     # Safe migration: add lang_code to connected_groups if it doesn't exist
     try:
         cursor.execute("ALTER TABLE connected_groups ADD COLUMN lang_code TEXT DEFAULT 'en'")
@@ -666,3 +674,39 @@ def get_system_stats() -> dict:
         return {"clone_bots": 0, "groups": 0, "users": 0, "payments": 0}
     finally:
         conn.close()
+
+
+# ─── Whitelist ────────────────────────────────────────────
+
+def add_to_whitelist(group_id: int, user_id: int, bot_id: int) -> None:
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "INSERT OR REPLACE INTO clone_group_whitelist (group_id, user_id, bot_id) VALUES (?, ?, ?)",
+        (group_id, user_id, bot_id)
+    )
+    conn.commit()
+    conn.close()
+
+
+def remove_from_whitelist(group_id: int, user_id: int) -> None:
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "DELETE FROM clone_group_whitelist WHERE group_id = ? AND user_id = ?",
+        (group_id, user_id)
+    )
+    conn.commit()
+    conn.close()
+
+
+def is_whitelisted(group_id: int, user_id: int) -> bool:
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute(
+        "SELECT 1 FROM clone_group_whitelist WHERE group_id = ? AND user_id = ?",
+        (group_id, user_id)
+    )
+    row = cursor.fetchone()
+    conn.close()
+    return row is not None
