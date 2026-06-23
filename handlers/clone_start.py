@@ -119,7 +119,7 @@ async def show_owner_dashboard(message: Message, bot_id: int, bot_username: str)
         [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group", style="primary")],
         [InlineKeyboardButton(text=f"📋 Manage Groups ({group_count})", callback_data="owner_manage_groups", style="primary")],
         [InlineKeyboardButton(text="💰 Wallet & Withdrawals", callback_data="owner_wallet", style="primary")],
-        [InlineKeyboardButton(text="⚙️ Group Commands", callback_data="owner_group_commands", style="primary")],
+        [InlineKeyboardButton(text="⚙️ Group Commands", callback_data="owner_grpcmds", style="primary")],
     ])
 
     msg_html = (
@@ -230,7 +230,7 @@ async def clone_main_menu(callback: CallbackQuery):
             [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group", style="primary")],
             [InlineKeyboardButton(text=f"📋 Manage Groups ({group_count})", callback_data="owner_manage_groups", style="primary")],
             [InlineKeyboardButton(text="💰 Wallet & Withdrawals", callback_data="owner_wallet", style="primary")],
-            [InlineKeyboardButton(text="⚙️ Group Commands", callback_data="owner_group_commands", style="primary")],
+            [InlineKeyboardButton(text="⚙️ Group Commands", callback_data="owner_grpcmds", style="primary")],
         ])
         msg_html = (
             f"<h3>🏠 Owner Dashboard</h3>\n"

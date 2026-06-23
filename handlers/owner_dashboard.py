@@ -569,7 +569,7 @@ async def owner_save_group_lang(callback: CallbackQuery):
 
 
 # ─── Group Commands Help ──────────────────────────────────────
-@router.callback_query(F.data == "owner_group_commands")
+@router.callback_query(F.data == "owner_grpcmds")
 async def owner_group_commands(callback: CallbackQuery):
     if not await is_owner(callback):
         await callback.answer("Only the bot owner can access this.", show_alert=True)
