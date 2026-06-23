@@ -9,7 +9,7 @@ from database.sqlite import (
     delete_group_package, get_group_package_by_id, update_group_package,
     get_creator_balance, set_withdrawal_address, debit_creator_balance,
     create_withdrawal, complete_withdrawal, fail_withdrawal,
-    set_group_lang
+    set_group_lang, get_user_lang
 )
 import config
 import aiohttp
@@ -575,20 +575,22 @@ async def owner_group_commands(callback: CallbackQuery):
         await callback.answer("Only the bot owner can access this.", show_alert=True)
         return
 
+    lang = get_user_lang(callback.from_user.id) or "en"
+
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Back to Dashboard", callback_data="clone_main_menu", style="primary")]
+        [InlineKeyboardButton(text=t("BTN_BACK", lang), callback_data="clone_main_menu", style="primary")]
     ])
 
     help_html = (
-        "<h3>\u2699\ufe0f Group Commands Guide</h3>\n"
-        "<p>Use these commands inside your connected groups:</p>\n"
-        "<ul>"
-        "<li><b>/connect</b> \u2014 Connect the group to your bot. The bot must be an admin first.</li>\n"
-        "<li><b>/white @username</b> (or reply to a message) \u2014 Whitelist a user so they can chat freely without a subscription.</li>\n"
-        "<li><b>/black @username</b> (or reply to a message) \u2014 Remove a user from the whitelist.</li>\n"
-        "</ul>"
-        "<p>\ud83d\udca1 Group admins and the bot owner are <b>always allowed</b> to chat freely.</p>\n"
-        "<p>\u23f1 Command messages auto-delete after 5 minutes to keep the group clean.</p>"
+        f"<h3>{t('GRP_CMDS_TITLE', lang)}</h3>\n"
+        f"<p>{t('GRP_CMDS_INTRO', lang)}</p>\n"
+        f"<ul>"
+        f"<li>{t('GRP_CMDS_CONNECT', lang)}</li>\n"
+        f"<li>{t('GRP_CMDS_WHITE', lang)}</li>\n"
+        f"<li>{t('GRP_CMDS_BLACK', lang)}</li>\n"
+        f"</ul>"
+        f"<p>{t('GRP_CMDS_NOTE_ADMIN', lang)}</p>\n"
+        f"<p>{t('GRP_CMDS_NOTE_DELETE', lang)}</p>"
     )
 
     await safe_edit_rich_message(

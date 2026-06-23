@@ -115,3 +115,13 @@ GROUP_LANG_SET_TITLE = "🌐 设置群组语言"
 GROUP_LANG_SET_BODY = "选择在此群组中发送消息所用的语言。"
 GROUP_LANG_SAVED = "✅ 群组语言已设置为 {lang}！"
 BTN_SET_GROUP_LANG = "🌐 群组语言"
+
+# Owner dashboard — group commands help
+GRP_CMDS_TITLE = "⚙️ 群组命令指南"
+GRP_CMDS_INTRO = "在已连接的群组中使用以下命令："
+GRP_CMDS_CONNECT = "<b>/connect</b> — 将群组连接到机器人。机器人必须先成为管理员。"
+GRP_CMDS_WHITE = "<b>/white @用户名</b>（或回复消息）— 将用户加入白名单，使其无需订阅即可自由聊天。"
+GRP_CMDS_BLACK = "<b>/black @用户名</b>（或回复消息）— 将用户从白名单中移除。"
+GRP_CMDS_NOTE_ADMIN = "💡 群组管理员和机器人所有者<b>始终可以</b>自由聊天。"
+GRP_CMDS_NOTE_DELETE = "⏱ 命令消息将在5分钟后自动删除。"
+

@@ -116,3 +116,13 @@ GROUP_LANG_SET_TITLE = "🌐 ग्रुप भाषा सेट करें
 GROUP_LANG_SET_BODY = "इस ग्रुप में भेजे जाने वाले संदेशों के लिए भाषा चुनें।"
 GROUP_LANG_SAVED = "✅ ग्रुप भाषा {lang} सेट की गई!"
 BTN_SET_GROUP_LANG = "🌐 ग्रुप भाषा"
+
+# Owner dashboard — group commands help
+GRP_CMDS_TITLE = "⚙️ ग्रुप कमांड गाइड"
+GRP_CMDS_INTRO = "अपने जुड़े हुए ग्रुप में ये कमांड इस्तेमाल करें:"
+GRP_CMDS_CONNECT = "<b>/connect</b> — ग्रुप को बॉट से कनेक्ट करें। पहले बॉट को एडमिन बनाएं।"
+GRP_CMDS_WHITE = "<b>/white @username</b> (या संदेश का जवाब दें) — यूज़र को व्हाइटलिस्ट करें ताकि वो बिना सब्सक्रिप्शन के चैट कर सके।"
+GRP_CMDS_BLACK = "<b>/black @username</b> (या संदेश का जवाब दें) — यूज़र को व्हाइटलिस्ट से हटाएं।"
+GRP_CMDS_NOTE_ADMIN = "💡 ग्रुप एडमिन और बॉट मालिक <b>हमेशा</b> स्वतंत्र रूप से चैट कर सकते हैं।"
+GRP_CMDS_NOTE_DELETE = "⏱ कमांड संदेश 5 मिनट बाद अपने आप डिलीट हो जाते हैं।"
+

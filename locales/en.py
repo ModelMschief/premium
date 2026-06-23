@@ -136,3 +136,12 @@ GROUP_LANG_SET_TITLE = "🌐 Set Group Language"
 GROUP_LANG_SET_BODY = "Select the language for messages sent in this group."
 GROUP_LANG_SAVED = "✅ Group language set to {lang}!"
 BTN_SET_GROUP_LANG = "🌐 Set Group Language"
+
+# Owner dashboard — group commands help
+GRP_CMDS_TITLE = "⚙️ Group Commands Guide"
+GRP_CMDS_INTRO = "Use these commands inside your connected groups:"
+GRP_CMDS_CONNECT = "<b>/connect</b> — Connect the group to your bot. The bot must be an admin first."
+GRP_CMDS_WHITE = "<b>/white @username</b> (or reply to a message) — Whitelist a user so they can chat freely without a subscription."
+GRP_CMDS_BLACK = "<b>/black @username</b> (or reply to a message) — Remove a user from the whitelist."
+GRP_CMDS_NOTE_ADMIN = "💡 Group admins and the bot owner are <b>always allowed</b> to chat freely."
+GRP_CMDS_NOTE_DELETE = "⏱ Command messages auto-delete after 5 minutes to keep the group clean."

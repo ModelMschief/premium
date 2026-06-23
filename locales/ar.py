@@ -115,3 +115,13 @@ GROUP_LANG_SET_TITLE = "🌐 تعيين لغة المجموعة"
 GROUP_LANG_SET_BODY = "اختر لغة الرسائل المرسلة في هذه المجموعة."
 GROUP_LANG_SAVED = "✅ تم تعيين لغة المجموعة إلى {lang}!"
 BTN_SET_GROUP_LANG = "🌐 لغة المجموعة"
+
+# Owner dashboard — group commands help
+GRP_CMDS_TITLE = "⚙️ دليل أوامر المجموعة"
+GRP_CMDS_INTRO = "استخدم هذه الأوامر داخل مجموعاتك المتصلة:"
+GRP_CMDS_CONNECT = "<b>/connect</b> — ربط المجموعة بالبوت. يجب أن يكون البوت مشرفاً أولاً."
+GRP_CMDS_WHITE = "<b>/white @username</b> (أو رد على رسالة) — إضافة مستخدم للقائمة البيضاء ليتحدث بحرية دون اشتراك."
+GRP_CMDS_BLACK = "<b>/black @username</b> (أو رد على رسالة) — إزالة مستخدم من القائمة البيضاء."
+GRP_CMDS_NOTE_ADMIN = "💡 مشرفو المجموعة ومالك البوت <b>مسموح لهم دائماً</b> بالتحدث بحرية."
+GRP_CMDS_NOTE_DELETE = "⏱ رسائل الأوامر تُحذف تلقائياً بعد 5 دقائق."
+
