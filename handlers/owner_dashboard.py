@@ -17,6 +17,7 @@ import shortuuid
 import logging
 from locales import t, LANG_NAMES
 from handlers.language import build_lang_picker_markup
+from rich_utils import safe_edit_rich_message
 
 logger = logging.getLogger(__name__)
 
@@ -202,6 +203,10 @@ async def receive_package(message: Message, state: FSMContext):
     data = await state.get_data()
     group_id = data.get("group_id")
 
+    cancel_markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Cancel", callback_data=f"owner_group_{group_id}", style="primary")]
+    ])
+
     try:
         parts = message.text.strip().split(",")
         duration_days = int(parts[0].strip())
@@ -223,6 +228,7 @@ async def receive_package(message: Message, state: FSMContext):
         await message.answer(
             "❌ Invalid format. Please send: <code>days,stars,usdt</code>\n"
             "Example: <code>30,100,5</code>",
+            reply_markup=cancel_markup,
             parse_mode="HTML"
         )
 
@@ -278,7 +284,12 @@ async def owner_edit_package(callback: CallbackQuery, state: FSMContext):
 @router.message(OwnerStates.waiting_for_edit_package)
 async def receive_edit_package(message: Message, state: FSMContext):
     data = await state.get_data()
-    package_id = data.get("edit_package_id")
+    edit_package_id = data.get("edit_package_id")
+    group_id = data.get("group_id")
+
+    cancel_markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Cancel", callback_data=f"owner_group_{group_id}", style="primary")]
+    ])
 
     try:
         parts = message.text.strip().split(",")
@@ -289,7 +300,7 @@ async def receive_edit_package(message: Message, state: FSMContext):
         if duration_days <= 0 or stars_price <= 0 or usdt_price <= 0:
             raise ValueError("All values must be positive")
 
-        update_group_package(package_id, duration_days, stars_price, usdt_price)
+        update_group_package(edit_package_id, duration_days, stars_price, usdt_price)
         await state.clear()
 
         await message.answer(
@@ -301,6 +312,7 @@ async def receive_edit_package(message: Message, state: FSMContext):
         await message.answer(
             "❌ Invalid format. Please send: <code>days,stars,usdt</code>\n"
             "Example: <code>30,100,5</code>",
+            reply_markup=cancel_markup,
             parse_mode="HTML"
         )
 
@@ -522,9 +534,12 @@ async def owner_set_group_lang_picker(callback: CallbackQuery):
     buttons.append([InlineKeyboardButton(text="🔙 Back", callback_data=f"owner_group_{group_id}", style="primary")])
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    await callback.message.edit_text(
+    await safe_edit_rich_message(
+        callback.bot,
+        callback.message.chat.id,
+        callback.message.message_id,
         f"<b>🌐 Set Group Language</b>\n\nSelect the language for messages sent in this group.",
-        reply_markup=markup, parse_mode="HTML"
+        markup
     )
     await callback.answer()
 
@@ -564,18 +579,23 @@ async def owner_group_commands(callback: CallbackQuery):
         [InlineKeyboardButton(text="🔙 Back to Dashboard", callback_data="clone_main_menu", style="primary")]
     ])
 
-    help_text = (
-        "<b>⚙️ Group Commands Guide</b>\n\n"
-        "Use these commands inside your connected groups:\n\n"
-        "<b>/connect</b>\n"
-        "└ Connect the group to your bot. The bot must be an admin first.\n\n"
-        "<b>/white @username</b> (or reply to a message)\n"
-        "└ Add a user to the whitelist. They can chat freely without a subscription.\n\n"
-        "<b>/black @username</b> (or reply to a message)\n"
-        "└ Remove a user from the whitelist. They will need a subscription again.\n\n"
-        "<i>💡 Group admins and the group owner are always allowed to chat freely — no need to whitelist them.</i>\n\n"
-        "<i>⏱ Command messages auto-delete after 5 minutes to keep the group clean.</i>"
+    help_html = (
+        "<h3>\u2699\ufe0f Group Commands Guide</h3>\n"
+        "<p>Use these commands inside your connected groups:</p>\n"
+        "<ul>"
+        "<li><b>/connect</b> \u2014 Connect the group to your bot. The bot must be an admin first.</li>\n"
+        "<li><b>/white @username</b> (or reply to a message) \u2014 Whitelist a user so they can chat freely without a subscription.</li>\n"
+        "<li><b>/black @username</b> (or reply to a message) \u2014 Remove a user from the whitelist.</li>\n"
+        "</ul>"
+        "<p>\ud83d\udca1 Group admins and the bot owner are <b>always allowed</b> to chat freely.</p>\n"
+        "<p>\u23f1 Command messages auto-delete after 5 minutes to keep the group clean.</p>"
     )
 
-    await callback.message.edit_text(help_text, reply_markup=markup, parse_mode="HTML")
+    await safe_edit_rich_message(
+        callback.bot,
+        callback.message.chat.id,
+        callback.message.message_id,
+        help_html,
+        markup
+    )
     await callback.answer()
