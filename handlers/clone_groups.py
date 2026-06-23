@@ -108,8 +108,11 @@ async def whitelist_add_command(message: Message):
 
     if target_id is None:
         reply = await message.reply(
-            "⚠️ <b>Usage:</b> Reply to a user's message or mention them.\n"
-            "<code>/white @username</code> or reply to their message with <code>/white</code>",
+            "⚠️ <b>Usage:</b>\n"
+            "1. Reply to the bot's warning message with <code>/white</code>\n"
+            "2. Send <code>/white 123456789</code> (User ID)\n"
+            "3. Send <code>/white @username</code>\n"
+            "4. Reply to a user's message with <code>/white</code>",
             parse_mode="HTML"
         )
         asyncio.create_task(_auto_delete(reply))
@@ -146,8 +149,10 @@ async def whitelist_remove_command(message: Message):
 
     if target_id is None:
         reply = await message.reply(
-            "⚠️ <b>Usage:</b> Reply to a user's message or mention them.\n"
-            "<code>/black @username</code> or reply to their message with <code>/black</code>",
+            "⚠️ <b>Usage:</b>\n"
+            "1. Reply to a user's message with <code>/black</code>\n"
+            "2. Send <code>/black 123456789</code> (User ID)\n"
+            "3. Send <code>/black @username</code>",
             parse_mode="HTML"
         )
         asyncio.create_task(_auto_delete(reply))
@@ -168,29 +173,71 @@ async def whitelist_remove_command(message: Message):
 
 async def _resolve_target(message: Message):
     """
-    Resolve a target user from a command message.
-    Priority: reply > text_mention entity > @username entity > command arg username.
-    Returns (user_id, display_name) or (None, None).
+    Helper to resolve target user from command message.
+    Returns (user_id, first_name) or (None, None).
     """
-    # 1. Reply to a message
-    if message.reply_to_message and message.reply_to_message.from_user:
-        u = message.reply_to_message.from_user
-        return u.id, u.first_name
+    # 1. Check if owner replied to a message
+    if message.reply_to_message:
+        replied = message.reply_to_message
+        
+        # Case A: Replied to an actual user's message (e.g. for /black)
+        if replied.from_user and replied.from_user.id != message.bot.id:
+            u = replied.from_user
+            return u.id, u.first_name
+            
+        # Case B: Replied to the bot's own warning message!
+        # The bot's GROUP_KICK_MSG contains <a href='tg://user?id=123456'>Name</a>
+        if replied.from_user and replied.from_user.id == message.bot.id:
+            if replied.entities:
+                for entity in replied.entities:
+                    if entity.type == "text_link" and entity.url and entity.url.startswith("tg://user?id="):
+                        try:
+                            user_id = int(entity.url.split("=")[1])
+                            # Extract the name from the text based on offset/length
+                            name = "User"
+                            if replied.text:
+                                # Encode to utf-16-le to match telegram's entity offsets
+                                text_utf16 = replied.text.encode("utf-16-le")
+                                name_utf16 = text_utf16[entity.offset * 2 : (entity.offset + entity.length) * 2]
+                                name = name_utf16.decode("utf-16-le")
+                            return user_id, name
+                        except Exception:
+                            pass
+                    # If it was a text_mention instead (some clients)
+                    if entity.type == "text_mention" and entity.user:
+                        u = entity.user
+                        return u.id, u.first_name
 
-    # 2. Mention entities in the message (text_mention = user with no username)
+    # 2. Check entities in the command itself
     if message.entities:
         for entity in message.entities:
             if entity.type == "text_mention" and entity.user:
                 u = entity.user
                 return u.id, u.first_name
-            if entity.type == "mention":
-                # Extract @username from text
-                username = message.text[entity.offset + 1: entity.offset + entity.length]
-                try:
-                    chat = await message.bot.get_chat(f"@{username}")
-                    return chat.id, chat.first_name or username
-                except Exception:
-                    pass
+
+    # 3. Check text arguments (e.g., /white 123456789 or /white @username)
+    parts = message.text.split()
+    if len(parts) > 1:
+        target_str = parts[1]
+        
+        # If they passed an ID directly
+        if target_str.isdigit() or (target_str.startswith("-") and target_str[1:].isdigit()):
+            user_id = int(target_str)
+            try:
+                chat = await message.bot.get_chat(user_id)
+                return chat.id, chat.first_name or str(user_id)
+            except Exception:
+                return user_id, str(user_id)
+                
+        # If they passed @username
+        if target_str.startswith("@"):
+            username = target_str.lstrip("@")
+            try:
+                chat = await message.bot.get_chat(f"@{username}")
+                return chat.id, chat.first_name or username
+            except Exception:
+                # Telegram often blocks this for regular users. We return None so the command handles it.
+                pass
 
     return None, None
 
