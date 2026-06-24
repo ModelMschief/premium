@@ -4,8 +4,9 @@ from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from database.sqlite import (
     get_clone_quota, increment_used_slots, add_cloned_bot,
-    get_cloned_bots_by_owner
+    get_cloned_bots_by_owner, get_user_lang
 )
+from locales import t
 from database.mongo import is_banned
 import bot_manager
 import config
@@ -28,25 +29,18 @@ async def show_clone_info(callback: CallbackQuery):
         await callback.answer("You are banned.", show_alert=True)
         return
 
+    lang = get_user_lang(callback.from_user.id) or "en"
     quota = get_clone_quota(callback.from_user.id)
     remaining = quota["total_slots"] - quota["used_slots"]
 
     msg = (
-        "🤖 <b>Clone Your Own Premium Group Bot!</b>\n\n"
-        "Turn any Telegram group into a <b>premium membership</b> community.\n\n"
-        "✨ <b>How it works:</b>\n"
-        "1️⃣ Create a bot with <a href='https://t.me/BotFather'>@BotFather</a>\n"
-        "2️⃣ Send us the token\n"
-        "3️⃣ Add the bot to your group as admin\n"
-        "4️⃣ Set subscription packages\n"
-        "5️⃣ Start earning from group memberships!\n\n"
-        "💰 <b>You earn 90%</b> of all USDT payments + 100% of Telegram Stars.\n\n"
-        f"📊 <b>Your Slots:</b> {quota['used_slots']}/{quota['total_slots']} used ({remaining} remaining)\n"
+        f"<h3>{t('CLONE_MAIN_TITLE', lang)}</h3>\n"
+        f"{t('CLONE_MAIN_BODY', lang).format(used=quota['used_slots'], total=quota['total_slots'], remaining=remaining)}"
     )
 
-    buttons = [[InlineKeyboardButton(text="🤖 Create My Bot", callback_data="clone_create")]]
+    buttons = [[InlineKeyboardButton(text=t("BTN_CREATE_BOT", lang), callback_data="clone_create")]]
     if remaining <= 0:
-        buttons.append([InlineKeyboardButton(text=f"🛒 Buy +5 Slots (⭐️ {config.CLONE_SLOT_STARS_PRICE} / 🪙 {config.CLONE_SLOT_USDT_PRICE} USDT)", callback_data="clone_buy_slots")])
+        buttons.append([InlineKeyboardButton(text=t("BTN_BUY_SLOTS", lang).format(stars=config.CLONE_SLOT_STARS_PRICE, usdt=config.CLONE_SLOT_USDT_PRICE), callback_data="clone_buy_slots")])
 
     # Show existing bots
     my_bots = get_cloned_bots_by_owner(callback.from_user.id)
@@ -54,9 +48,10 @@ async def show_clone_info(callback: CallbackQuery):
         msg += "\n<b>Your Bots:</b> Click below to manage your bots or replace revoked tokens.\n"
         for b in my_bots:
             status_icon = "🟢" if b["clone_status"] == "active" else "🔴"
-            buttons.append([InlineKeyboardButton(text=f"{status_icon} Manage @{b['bot_username']}", callback_data=f"manageclone_{b['bot_id']}")])
+            manage_text = t("BTN_MANAGE_BOT", lang).format(icon=status_icon, username=b['bot_username'])
+            buttons.append([InlineKeyboardButton(text=manage_text, callback_data=f"manageclone_{b['bot_id']}")])
 
-    buttons.append([InlineKeyboardButton(text="🔙 Main Menu", callback_data="main_menu")])
+    buttons.append([InlineKeyboardButton(text=t("BTN_BACK_MAIN", lang), callback_data="main_menu")])
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
     await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
@@ -78,16 +73,15 @@ async def clone_create(callback: CallbackQuery, state: FSMContext):
         return
 
     await state.set_state(CloneStates.waiting_for_token)
+    lang = get_user_lang(callback.from_user.id) or "en"
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Cancel", callback_data="clone_cancel")]
+        [InlineKeyboardButton(text=t("BTN_BACK", lang), callback_data="clone_cancel")]
     ])
 
     await callback.message.edit_text(
-        "🔑 <b>Send Your Bot Token</b>\n\n"
-        "Open <a href='https://t.me/BotFather'>@BotFather</a>, create a new bot, "
-        "and send me the <b>API token</b> here.\n\n"
-        "It looks like: <code>123456:ABCdefGHIjkl...</code>",
+        f"<h3>{t('CLONE_SEND_TOKEN_TITLE', lang)}</h3>\n"
+        f"<p>{t('CLONE_SEND_TOKEN_BODY', lang)}</p>",
         reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True
     )
     await callback.answer()

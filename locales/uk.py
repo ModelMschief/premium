@@ -126,3 +126,22 @@ GRP_CMDS_BLACK = "<b>/black @username</b> (або відповідь на пов
 GRP_CMDS_NOTE_ADMIN = "💡 Адміністратори групи та власник бота <b>завжди можуть</b> писати вільно."
 GRP_CMDS_NOTE_DELETE = "⏱ Повідомлення з командами автоматично видаляються через 5 хвилин."
 
+# Owner Dashboard
+OWNER_DASH_TITLE = "🏠 Панель власника"
+OWNER_DASH_BODY = "<ul><li>🤖 Бот: @{bot_username}</li>\n<li>📢 Підключені групи: <b>{group_count}</b></li></ul>\n<p>Виберіть опцію нижче для керування ботом.</p>"
+BTN_CONNECT_GROUP = "➕ Підключити нову групу"
+BTN_MANAGE_GROUPS = "📋 Керування групами ({count})"
+BTN_WALLET = "💰 Гаманець та виведення коштів"
+BTN_GROUP_CMDS = "⚙️ Команди групи"
+OWNER_PKG_ADDED = "✅ <b>Пакет додано!</b>\n\n📦 {days} Днів | ⭐️ {stars} Зірок | 🪙 {usdt} USDT"
+BTN_ADD_MORE_PKG = "➕ Додати ще пакет"
+
+# Clone Bot Menu (Main Bot)
+CLONE_MAIN_TITLE = "🤖 Створіть власного бота для преміум-груп!"
+CLONE_MAIN_BODY = "Перетворіть будь-яку групу Telegram на спільноту з <b>платним доступом</b>.\n\n✨ <b>Як це працює:</b>\n1️⃣ Створіть бота через <a href='https://t.me/BotFather'>@BotFather</a>\n2️⃣ Надішліть нам токен\n3️⃣ Додайте бота до вашої групи як адміністратора\n4️⃣ Налаштуйте пакети підписки\n5️⃣ Почніть заробляти!\n\n💰 <b>Ви отримуєте 90%</b> від усіх платежів USDT + 100% Telegram Stars.\n\n📊 <b>Ваші слоти:</b> {used}/{total} використано ({remaining} залишилось)\n"
+BTN_CREATE_BOT = "🤖 Створити мого бота"
+BTN_BUY_SLOTS = "🛒 Купити +5 слотів (⭐️ {stars} / 🪙 {usdt} USDT)"
+BTN_MANAGE_BOT = "{icon} Керування @{username}"
+CLONE_SEND_TOKEN_TITLE = "🔑 Надішліть токен вашого бота"
+CLONE_SEND_TOKEN_BODY = "Відкрийте <a href='https://t.me/BotFather'>@BotFather</a>, створіть нового бота та надішліть мені <b>API токен</b> тут.\n\nВін виглядає так: <code>123456:ABCdefGHIjkl...</code>"
+

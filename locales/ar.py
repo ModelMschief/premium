@@ -125,3 +125,22 @@ GRP_CMDS_BLACK = "<b>/black @username</b> (أو رد على رسالة) — إز
 GRP_CMDS_NOTE_ADMIN = "💡 مشرفو المجموعة ومالك البوت <b>مسموح لهم دائماً</b> بالتحدث بحرية."
 GRP_CMDS_NOTE_DELETE = "⏱ رسائل الأوامر تُحذف تلقائياً بعد 5 دقائق."
 
+# Owner Dashboard
+OWNER_DASH_TITLE = "🏠 لوحة تحكم المالك"
+OWNER_DASH_BODY = "<ul><li>🤖 البوت: @{bot_username}</li>\n<li>📢 المجموعات المتصلة: <b>{group_count}</b></li></ul>\n<p>حدد خياراً أدناه لإدارة البوت الخاص بك.</p>"
+BTN_CONNECT_GROUP = "➕ ربط مجموعة جديدة"
+BTN_MANAGE_GROUPS = "📋 إدارة المجموعات ({count})"
+BTN_WALLET = "💰 المحفظة والسحب"
+BTN_GROUP_CMDS = "⚙️ أوامر المجموعة"
+OWNER_PKG_ADDED = "✅ <b>تمت إضافة الباقة!</b>\n\n📦 {days} أيام | ⭐️ {stars} نجوم | 🪙 {usdt} USDT"
+BTN_ADD_MORE_PKG = "➕ إضافة باقة أخرى"
+
+# Clone Bot Menu (Main Bot)
+CLONE_MAIN_TITLE = "🤖 أنشئ بوت المجموعة المدفوعة الخاص بك!"
+CLONE_MAIN_BODY = "حوّل أي مجموعة تيليجرام إلى مجتمع <b>اشتراكات مدفوعة</b>.\n\n✨ <b>كيف يعمل:</b>\n1️⃣ أنشئ بوتاً عبر <a href='https://t.me/BotFather'>@BotFather</a>\n2️⃣ أرسل لنا التوكن\n3️⃣ أضف البوت إلى مجموعتك كمشرف\n4️⃣ عيّن باقات الاشتراك\n5️⃣ ابدأ في كسب المال!\n\n💰 <b>أنت تربح 90%</b> من جميع مدفوعات USDT + 100% من نجوم تيليجرام.\n\n📊 <b>البوتات المتاحة لك:</b> تم استخدام {used}/{total} (المتبقي {remaining})\n"
+BTN_CREATE_BOT = "🤖 إنشاء البوت الخاص بي"
+BTN_BUY_SLOTS = "🛒 شراء +5 بوتات (⭐️ {stars} / 🪙 {usdt} USDT)"
+BTN_MANAGE_BOT = "{icon} إدارة @{username}"
+CLONE_SEND_TOKEN_TITLE = "🔑 أرسل توكن البوت الخاص بك"
+CLONE_SEND_TOKEN_BODY = "افتح <a href='https://t.me/BotFather'>@BotFather</a>، وأنشئ بوتاً جديداً، ثم أرسل لي <b>API Token</b> هنا.\n\nيبدو هكذا: <code>123456:ABCdefGHIjkl...</code>"
+

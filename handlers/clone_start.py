@@ -45,18 +45,18 @@ async def clone_cmd_start(message: Message, command: CommandObject):
     owner_user_id = clone_data["owner_user_id"]
     user_id = message.from_user.id
 
-    # ─── Owner enters dashboard ──────────────────────────
-    if user_id == owner_user_id:
-        await show_owner_dashboard(message, bot_id, bot_info.username)
-        return
-
-    # ─── First-time user: show language picker ───────────
+    # ─── First-time user (Owner or Regular): show language picker ───────────
     if get_user_lang(user_id) is None:
         await safe_send_rich_message(
             message.bot, message.chat.id,
             "<h2>🌐 Select Language / Выберите язык / 语言选择</h2>",
             build_lang_picker_markup("setlang")
         )
+        return
+
+    # ─── Owner enters dashboard ──────────────────────────
+    if user_id == owner_user_id:
+        await show_owner_dashboard(message, bot_id, bot_info.username)
         return
 
     # ─── Handle /start sub_{group_id} ────────────────────
@@ -114,21 +114,19 @@ async def show_owner_dashboard(message: Message, bot_id: int, bot_username: str)
     """Show the owner's management dashboard."""
     groups = get_connected_groups(bot_id)
     group_count = len(groups)
+    user_id = message.from_user.id
+    lang = _resolve_lang(user_id)
 
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group", style="primary")],
-        [InlineKeyboardButton(text=f"📋 Manage Groups ({group_count})", callback_data="owner_manage_groups", style="primary")],
-        [InlineKeyboardButton(text="💰 Wallet & Withdrawals", callback_data="owner_wallet", style="primary")],
-        [InlineKeyboardButton(text="⚙️ Group Commands", callback_data="owner_grpcmds", style="primary")],
+        [InlineKeyboardButton(text=t("BTN_CONNECT_GROUP", lang), callback_data="owner_connect_group", style="primary")],
+        [InlineKeyboardButton(text=t("BTN_MANAGE_GROUPS", lang).format(count=group_count), callback_data="owner_manage_groups", style="primary")],
+        [InlineKeyboardButton(text=t("BTN_WALLET", lang), callback_data="owner_wallet", style="primary")],
+        [InlineKeyboardButton(text=t("BTN_GROUP_CMDS", lang), callback_data="owner_grpcmds", style="primary")],
     ])
 
     msg_html = (
-        f"<h3>🏠 Owner Dashboard</h3>\n"
-        f"<ul>"
-        f"<li>🤖 Bot: @{bot_username}</li>\n"
-        f"<li>📢 Connected Groups: <b>{group_count}</b></li>\n"
-        f"</ul>"
-        f"<p>Select an option below to manage your bot.</p>"
+        f"<h3>{t('OWNER_DASH_TITLE', lang)}</h3>\n"
+        f"{t('OWNER_DASH_BODY', lang).format(bot_username=bot_username, group_count=group_count)}"
     )
     await safe_send_rich_message(message.bot, message.chat.id, msg_html, markup)
 
@@ -227,18 +225,14 @@ async def clone_main_menu(callback: CallbackQuery):
         groups = get_connected_groups(bot_id)
         group_count = len(groups)
         markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text="➕ Connect New Group", callback_data="owner_connect_group", style="primary")],
-            [InlineKeyboardButton(text=f"📋 Manage Groups ({group_count})", callback_data="owner_manage_groups", style="primary")],
-            [InlineKeyboardButton(text="💰 Wallet & Withdrawals", callback_data="owner_wallet", style="primary")],
-            [InlineKeyboardButton(text="⚙️ Group Commands", callback_data="owner_grpcmds", style="primary")],
+            [InlineKeyboardButton(text=t("BTN_CONNECT_GROUP", lang), callback_data="owner_connect_group", style="primary")],
+            [InlineKeyboardButton(text=t("BTN_MANAGE_GROUPS", lang).format(count=group_count), callback_data="owner_manage_groups", style="primary")],
+            [InlineKeyboardButton(text=t("BTN_WALLET", lang), callback_data="owner_wallet", style="primary")],
+            [InlineKeyboardButton(text=t("BTN_GROUP_CMDS", lang), callback_data="owner_grpcmds", style="primary")],
         ])
         msg_html = (
-            f"<h3>🏠 Owner Dashboard</h3>\n"
-            f"<ul>"
-            f"<li>🤖 Bot: @{bot_info.username}</li>\n"
-            f"<li>📢 Connected Groups: <b>{group_count}</b></li>\n"
-            f"</ul>"
-            f"<p>Select an option below to manage your bot.</p>"
+            f"<h3>{t('OWNER_DASH_TITLE', lang)}</h3>\n"
+            f"{t('OWNER_DASH_BODY', lang).format(bot_username=bot_info.username, group_count=group_count)}"
         )
         await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg_html, markup)
     else:

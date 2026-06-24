@@ -145,3 +145,22 @@ GRP_CMDS_WHITE = "<b>/white @username</b> (or reply to a message) — Whitelist 
 GRP_CMDS_BLACK = "<b>/black @username</b> (or reply to a message) — Remove a user from the whitelist."
 GRP_CMDS_NOTE_ADMIN = "💡 Group admins and the bot owner are <b>always allowed</b> to chat freely."
 GRP_CMDS_NOTE_DELETE = "⏱ Command messages auto-delete after 5 minutes to keep the group clean."
+
+# Owner Dashboard
+OWNER_DASH_TITLE = "🏠 Owner Dashboard"
+OWNER_DASH_BODY = "<ul><li>🤖 Bot: @{bot_username}</li>\n<li>📢 Connected Groups: <b>{group_count}</b></li></ul>\n<p>Select an option below to manage your bot.</p>"
+BTN_CONNECT_GROUP = "➕ Connect New Group"
+BTN_MANAGE_GROUPS = "📋 Manage Groups ({count})"
+BTN_WALLET = "💰 Wallet & Withdrawals"
+BTN_GROUP_CMDS = "⚙️ Group Commands"
+OWNER_PKG_ADDED = "✅ <b>Package Added!</b>\n\n📦 {days} Days | ⭐️ {stars} Stars | 🪙 {usdt} USDT"
+BTN_ADD_MORE_PKG = "➕ Add More Package"
+
+# Clone Bot Menu (Main Bot)
+CLONE_MAIN_TITLE = "🤖 Clone Your Own Premium Group Bot!"
+CLONE_MAIN_BODY = "Turn any Telegram group into a <b>premium membership</b> community.\n\n✨ <b>How it works:</b>\n1️⃣ Create a bot with <a href='https://t.me/BotFather'>@BotFather</a>\n2️⃣ Send us the token\n3️⃣ Add the bot to your group as admin\n4️⃣ Set subscription packages\n5️⃣ Start earning from group memberships!\n\n💰 <b>You earn 90%</b> of all USDT payments + 100% of Telegram Stars.\n\n📊 <b>Your Slots:</b> {used}/{total} used ({remaining} remaining)\n"
+BTN_CREATE_BOT = "🤖 Create My Bot"
+BTN_BUY_SLOTS = "🛒 Buy +5 Slots (⭐️ {stars} / 🪙 {usdt} USDT)"
+BTN_MANAGE_BOT = "{icon} Manage @{username}"
+CLONE_SEND_TOKEN_TITLE = "🔑 Send Your Bot Token"
+CLONE_SEND_TOKEN_BODY = "Open <a href='https://t.me/BotFather'>@BotFather</a>, create a new bot, and send me the <b>API token</b> here.\n\nIt looks like: <code>123456:ABCdefGHIjkl...</code>"

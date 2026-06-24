@@ -125,3 +125,22 @@ GRP_CMDS_BLACK = "<b>/black @username</b> (یا پیغام کا جواب دیں)
 GRP_CMDS_NOTE_ADMIN = "💡 گروپ ایڈمنز اور بوٹ مالک <b>ہمیشہ</b> آزادانہ چیٹ کر سکتے ہیں۔"
 GRP_CMDS_NOTE_DELETE = "⏱ کمانڈ پیغامات 5 منٹ بعد خود بخود حذف ہو جاتے ہیں۔"
 
+# Owner Dashboard
+OWNER_DASH_TITLE = "🏠 مالک کا ڈیش بورڈ"
+OWNER_DASH_BODY = "<ul><li>🤖 بوٹ: @{bot_username}</li>\n<li>📢 منسلک گروپس: <b>{group_count}</b></li></ul>\n<p>اپنے بوٹ کا نظم کرنے کے لیے نیچے ایک آپشن منتخب کریں۔</p>"
+BTN_CONNECT_GROUP = "➕ نیا گروپ جوڑیں"
+BTN_MANAGE_GROUPS = "📋 گروپس کا نظم کریں ({count})"
+BTN_WALLET = "💰 والیٹ اور رقم نکلوانا"
+BTN_GROUP_CMDS = "⚙️ گروپ کمانڈز"
+OWNER_PKG_ADDED = "✅ <b>پیکیج شامل کر دیا گیا!</b>\n\n📦 {days} دن | ⭐️ {stars} ستارے | 🪙 {usdt} USDT"
+BTN_ADD_MORE_PKG = "➕ مزید پیکیج شامل کریں"
+
+# Clone Bot Menu (Main Bot)
+CLONE_MAIN_TITLE = "🤖 اپنا خود کا پریمیم گروپ بوٹ بنائیں!"
+CLONE_MAIN_BODY = "کسی بھی ٹیلیگرام گروپ کو <b>پریمیم ممبرشپ</b> کمیونٹی میں تبدیل کریں۔\n\n✨ <b>یہ کیسے کام کرتا ہے:</b>\n1️⃣ <a href='https://t.me/BotFather'>@BotFather</a> کے ساتھ ایک بوٹ بنائیں\n2️⃣ ہمیں ٹوکن بھیجیں\n3️⃣ بوٹ کو اپنے گروپ میں ایڈمن کے طور پر شامل کریں\n4️⃣ سبسکرپشن پیکجز سیٹ کریں\n5️⃣ کمانا شروع کریں!\n\n💰 <b>آپ کماتے ہیں 90%</b> تمام USDT ادائیگیوں کا + 100% ٹیلیگرام اسٹارز۔\n\n📊 <b>آپ کے سلاٹس:</b> {used}/{total} استعمال شدہ ({remaining} باقی)\n"
+BTN_CREATE_BOT = "🤖 میرا بوٹ بنائیں"
+BTN_BUY_SLOTS = "🛒 +5 سلاٹس خریدیں (⭐️ {stars} / 🪙 {usdt} USDT)"
+BTN_MANAGE_BOT = "{icon} @{username} کا نظم کریں"
+CLONE_SEND_TOKEN_TITLE = "🔑 اپنا بوٹ ٹوکن بھیجیں"
+CLONE_SEND_TOKEN_BODY = "<a href='https://t.me/BotFather'>@BotFather</a> کھولیں، ایک نیا بوٹ بنائیں، اور مجھے یہاں <b>API ٹوکن</b> بھیجیں۔\n\nیہ کچھ ایسا لگتا ہے: <code>123456:ABCdefGHIjkl...</code>"
+

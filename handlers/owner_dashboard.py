@@ -218,10 +218,22 @@ async def receive_package(message: Message, state: FSMContext):
 
         add_group_package(group_id, duration_days, stars_price, usdt_price)
         await state.clear()
+        
+        lang = get_user_lang(message.from_user.id) or "en"
+        success_msg = t("OWNER_PKG_ADDED", lang).format(
+            days=duration_days,
+            stars=stars_price,
+            usdt=usdt_price
+        )
+        
+        success_markup = InlineKeyboardMarkup(inline_keyboard=[
+            [InlineKeyboardButton(text=t("BTN_ADD_MORE_PKG", lang), callback_data=f"owner_add_package_{group_id}", style="primary")],
+            [InlineKeyboardButton(text=t("BTN_BACK", lang), callback_data=f"owner_group_{group_id}", style="primary")]
+        ])
 
         await message.answer(
-            f"✅ <b>Package Added!</b>\n\n"
-            f"📦 {duration_days} Days | ⭐️ {stars_price} Stars | 🪙 {usdt_price} USDT",
+            success_msg,
+            reply_markup=success_markup,
             parse_mode="HTML"
         )
     except (ValueError, IndexError):
