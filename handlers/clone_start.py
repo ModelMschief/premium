@@ -26,7 +26,7 @@ def _resolve_lang(user_id: int, group_id: int = None) -> str:
     """Resolve language: group lang → user lang → English."""
     if group_id:
         gl = get_group_lang(group_id)
-        if gl and gl != "en":
+        if gl:
             return gl
     ul = get_user_lang(user_id)
     return ul if ul else "en"
