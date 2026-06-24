@@ -7,7 +7,8 @@ from aiogram.filters import Command
 from database.sqlite import (
     get_connected_group, get_clone_subscription, get_cloned_bot_by_id,
     add_connected_group, get_group_lang, get_user_lang,
-    add_to_whitelist, remove_from_whitelist, is_whitelisted
+    add_to_whitelist, remove_from_whitelist, is_whitelisted,
+    get_group_packages
 )
 import config
 from locales import t
@@ -288,6 +289,13 @@ async def clone_group_message_filter(message: Message):
 
     # ── Allow: Whitelisted users ─────────────────────────────
     if is_whitelisted(group_id, user_id):
+        return
+
+    # ── Check if any packages exist ──────────────────────────
+    # If the owner hasn't set up any packages yet, we don't 
+    # want to start blindly deleting everyone's messages!
+    packages = get_group_packages(group_id)
+    if not packages:
         return
 
     # ── Check subscription ───────────────────────────────────
