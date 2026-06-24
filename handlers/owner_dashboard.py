@@ -227,8 +227,8 @@ async def receive_package(message: Message, state: FSMContext):
         )
         
         success_markup = InlineKeyboardMarkup(inline_keyboard=[
-            [InlineKeyboardButton(text=t("BTN_ADD_MORE_PKG", lang), callback_data=f"owner_add_package_{group_id}", style="primary")],
-            [InlineKeyboardButton(text=t("BTN_BACK", lang), callback_data=f"owner_group_{group_id}", style="primary")]
+            [InlineKeyboardButton(text=t("BTN_ADD_MORE_PKG", lang), callback_data=f"owner_addpkg_{group_id}", style="primary")],
+            [InlineKeyboardButton(text="🔙 Back", callback_data=f"owner_group_{group_id}", style="primary")]
         ])
 
         await message.answer(
