@@ -127,7 +127,7 @@ GRP_CMDS_NOTE_DELETE = "⏱ 命令消息将在5分钟后自动删除。"
 
 # Owner Dashboard
 OWNER_DASH_TITLE = "🏠 机器人所有者面板"
-OWNER_DASH_BODY = "<ul><li>🤖 机器人：@{bot_username}</li>\n<li>📢 已连接群组：<b>{group_count}</b></li></ul>\n<p>请在下方选择一个选项来管理您的机器人。</p>"
+OWNER_DASH_BODY = "<ul><li>🤖 机器人：@{bot_username}</li><li>📢 已连接群组：<b>{group_count}</b></li></ul><p>请在下方选择一个选项来管理您的机器人。</p>"
 BTN_CONNECT_GROUP = "➕ 连接新群组"
 BTN_MANAGE_GROUPS = "📋 管理群组 ({count})"
 BTN_WALLET = "💰 钱包与提现"
@@ -137,10 +137,10 @@ BTN_ADD_MORE_PKG = "➕ 继续添加套餐"
 
 # Clone Bot Menu (Main Bot)
 CLONE_MAIN_TITLE = "🤖 克隆您的高级群组机器人！"
-CLONE_MAIN_BODY = "将任何 Telegram 群组转变为<b>付费会员</b>社区。\n\n✨ <b>工作原理：</b>\n1️⃣ 使用 <a href='https://t.me/BotFather'>@BotFather</a> 创建一个机器人\n2️⃣ 将令牌发送给我们\n3️⃣ 将机器人作为管理员添加到您的群组中\n4️⃣ 设置订阅套餐\n5️⃣ 开始从群组会员费中赚钱！\n\n💰 <b>您将获得 90%</b> 的所有 USDT 支付收益 + 100% 的 Telegram Stars 收益。\n\n📊 <b>您的可用名额：</b> 已用 {used}/{total}（剩余 {remaining} 个）\n"
+CLONE_MAIN_BODY = "<p>将任何 Telegram 群组转变为<b>付费会员</b>社区。</p><p>✨ <b>工作原理：</b><br>1️⃣ 使用 <a href='https://t.me/BotFather'>@BotFather</a> 创建一个机器人<br>2️⃣ 将令牌发送给我们<br>3️⃣ 将机器人作为管理员添加到您的群组中<br>4️⃣ 设置订阅套餐<br>5️⃣ 开始从群组会员费中赚钱！</p><p>💰 <b>您将获得 90%</b> 的所有 USDT 支付收益 + 100% 的 Telegram Stars 收益。</p><p>📊 <b>您的可用名额：</b> 已用 {used}/{total}（剩余 {remaining} 个）</p>"
 BTN_CREATE_BOT = "🤖 创建我的机器人"
 BTN_BUY_SLOTS = "🛒 购买 +5 个名额 (⭐️ {stars} / 🪙 {usdt} USDT)"
 BTN_MANAGE_BOT = "{icon} 管理 @{username}"
 CLONE_SEND_TOKEN_TITLE = "🔑 发送您的机器人令牌"
-CLONE_SEND_TOKEN_BODY = "打开 <a href='https://t.me/BotFather'>@BotFather</a>，创建一个新机器人，然后在此处发送您的 <b>API 令牌</b>。\n\n它的格式类似：<code>123456:ABCdefGHIjkl...</code>"
+CLONE_SEND_TOKEN_BODY = "<p>打开 <a href='https://t.me/BotFather'>@BotFather</a>，创建一个新机器人，然后在此处发送您的 <b>API 令牌</b>。</p><p>它的格式类似：<br><code>123456:ABCdefGHIjkl...</code></p>"
 
