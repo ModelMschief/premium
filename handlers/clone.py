@@ -11,6 +11,7 @@ from database.mongo import is_banned
 import bot_manager
 import config
 import logging
+from rich_utils import safe_edit_rich_message
 
 logger = logging.getLogger(__name__)
 
@@ -54,7 +55,7 @@ async def show_clone_info(callback: CallbackQuery):
     buttons.append([InlineKeyboardButton(text=t("BTN_BACK_MAIN", lang), callback_data="main_menu")])
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
-    await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True)
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg, markup)
     await callback.answer()
 
 
@@ -79,11 +80,11 @@ async def clone_create(callback: CallbackQuery, state: FSMContext):
         [InlineKeyboardButton(text=t("BTN_BACK", lang), callback_data="clone_cancel")]
     ])
 
-    await callback.message.edit_text(
+    msg = (
         f"<h3>{t('CLONE_SEND_TOKEN_TITLE', lang)}</h3>\n"
-        f"<p>{t('CLONE_SEND_TOKEN_BODY', lang)}</p>",
-        reply_markup=markup, parse_mode="HTML", disable_web_page_preview=True
+        f"<p>{t('CLONE_SEND_TOKEN_BODY', lang)}</p>"
     )
+    await safe_edit_rich_message(callback.bot, callback.message.chat.id, callback.message.message_id, msg, markup)
     await callback.answer()
 
 
