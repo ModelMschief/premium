@@ -4,8 +4,8 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, InlineKeyboardMarkup, InlineKeyboardButton
 from aiogram.exceptions import TelegramBadRequest
 import config
-from database.sqlite import get_group_subscription, get_last_warning, set_last_warning
-
+import asyncio
+from database.sqlite import get_group_subscription
 router = Router()
 
 # Only handle messages in supported groups
@@ -60,17 +60,6 @@ async def group_message_handler(message: Message, bot: Bot):
             logging.error(f"Failed to delete message in {chat_id}: {e}")
             # Do not return here, we still want to send the warning!
             
-        # Try to delete previous warning message
-        try:
-            last_warning_id = get_last_warning(chat_id)
-            if last_warning_id:
-                try:
-                    await bot.delete_message(chat_id, last_warning_id)
-                except Exception:
-                    pass # Message might be already deleted or too old
-        except Exception as e:
-            logging.error(f"Database error fetching last warning: {e}")
-                
         # Send new warning message
         try:
             bot_info = await bot.get_me()
@@ -90,6 +79,16 @@ async def group_message_handler(message: Message, bot: Bot):
             )
             
             warning_msg = await bot.send_message(chat_id, warning_text, reply_markup=markup, parse_mode="HTML")
-            set_last_warning(chat_id, warning_msg.message_id)
+            
+            # Auto-delete warning after 5 minutes
+            async def delete_warning():
+                await asyncio.sleep(300)  # 5 minutes
+                try:
+                    await warning_msg.delete()
+                except Exception:
+                    pass
+
+            asyncio.create_task(delete_warning())
+            
         except Exception as e:
             logging.error(f"Failed to send warning or save it: {e}")
