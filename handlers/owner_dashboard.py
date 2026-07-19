@@ -156,7 +156,7 @@ async def render_group_detail(callback: CallbackQuery, group_id: int):
         msg += "<i>No packages configured yet.</i>\n"
 
     buttons = [
-        [InlineKeyboardButton(text=f"🛡 Toggle Protection", callback_data=f"owner_togprot_{group_id}", style="primary")],
+        [InlineKeyboardButton(text=f"🛡 Toggle Protection ({prot_status})", callback_data=f"owner_togprot_{group_id}", style="primary")],
         [InlineKeyboardButton(text="➕ Add Package", callback_data=f"owner_addpkg_{group_id}", style="primary")],
         [InlineKeyboardButton(text=t("BTN_SET_GROUP_LANG", "en"), callback_data=f"owner_setlang_{group_id}", style="primary")],
     ]
