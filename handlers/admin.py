@@ -4,7 +4,11 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.fsm.context import FSMContext
 from aiogram.fsm.state import State, StatesGroup
 from aiogram.exceptions import TelegramForbiddenError, TelegramBadRequest
-from database.sqlite import extend_group_subscription, log_local_payment, get_system_stats
+from database.sqlite import (
+    extend_group_subscription, log_local_payment, get_system_stats,
+    get_all_main_bot_users, get_all_clone_bot_users,
+    get_all_group_broadcast_targets, get_all_owner_broadcast_targets
+)
 import config
 
 router = Router()
@@ -12,6 +16,11 @@ router = Router()
 class AdminGiveSub(StatesGroup):
     waiting_for_user_id = State()
     waiting_for_duration = State()
+
+class AdminBroadcast(StatesGroup):
+    waiting_for_brgroup = State()
+    waiting_for_browners = State()
+    waiting_for_brall = State()
 
 @router.message(Command("admin"))
 async def cmd_admin(message: Message, bot: Bot):
@@ -147,3 +156,146 @@ async def cmd_stats(message: Message, bot: Bot):
     )
     
     await message.answer(msg_html, parse_mode="HTML")
+
+# ═══════════════════════════════════════════════════════════════
+# GLOBAL BROADCASTS
+# ═══════════════════════════════════════════════════════════════
+import asyncio
+
+async def _cross_bot_broadcast(main_bot: Bot, text_html: str, target_dict_list: list, id_key: str):
+    """Broadcasts a text message across multiple bots safely."""
+    success = 0
+    failed = 0
+    
+    # We will instantiate Bot objects temporarily for different tokens
+    sessions = {}
+    
+    for target in target_dict_list:
+        uid = target[id_key]
+        token = target.get("bot_token")
+        
+        if not token:
+            continue
+            
+        if token not in sessions:
+            sessions[token] = Bot(token=token)
+            
+        temp_bot = sessions[token]
+        try:
+            await temp_bot.send_message(uid, text_html, parse_mode="HTML")
+            success += 1
+        except Exception:
+            failed += 1
+        await asyncio.sleep(0.05)
+        
+    for b in sessions.values():
+        await b.session.close()
+        
+    return success, failed
+
+@router.message(Command("brgroup"))
+async def cmd_brgroup(message: Message, state: FSMContext):
+    if message.from_user.id != config.ADMIN_ID:
+        return
+    await state.set_state(AdminBroadcast.waiting_for_brgroup)
+    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Cancel", callback_data="admin_cancel_br")]])
+    await message.answer("📢 <b>Broadcast to All Groups</b>\nSend the TEXT message (HTML supported) you want to broadcast:", reply_markup=markup, parse_mode="HTML")
+
+@router.message(AdminBroadcast.waiting_for_brgroup)
+async def process_brgroup(message: Message, state: FSMContext, bot: Bot):
+    if not message.html_text:
+        await message.reply("Only text messages are supported for cross-bot broadcast. Please send text.")
+        return
+        
+    status_msg = await message.reply("🚀 Broadcasting to groups...")
+    
+    success = 0
+    failed = 0
+    
+    # Main bot hardcoded groups
+    for g_id in config.SUPPORTED_GROUPS:
+        try:
+            await bot.send_message(g_id, message.html_text, parse_mode="HTML")
+            success += 1
+        except Exception:
+            failed += 1
+        await asyncio.sleep(0.05)
+        
+    # Cloned bots connected groups
+    clone_groups = get_all_group_broadcast_targets()
+    s, f = await _cross_bot_broadcast(bot, message.html_text, clone_groups, "group_id")
+    success += s
+    failed += f
+    
+    await status_msg.edit_text(f"✅ <b>Broadcast Completed!</b>\n\n🎯 Sent: {success}\n❌ Failed: {failed}", parse_mode="HTML")
+    await state.clear()
+
+
+@router.message(Command("browners"))
+async def cmd_browners(message: Message, state: FSMContext):
+    if message.from_user.id != config.ADMIN_ID:
+        return
+    await state.set_state(AdminBroadcast.waiting_for_browners)
+    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Cancel", callback_data="admin_cancel_br")]])
+    await message.answer("📢 <b>Broadcast to Clone Owners</b>\nSend the TEXT message (HTML supported) you want to broadcast:", reply_markup=markup, parse_mode="HTML")
+
+@router.message(AdminBroadcast.waiting_for_browners)
+async def process_browners(message: Message, state: FSMContext, bot: Bot):
+    if not message.html_text:
+        await message.reply("Only text messages are supported for cross-bot broadcast. Please send text.")
+        return
+        
+    status_msg = await message.reply("🚀 Broadcasting to clone owners via their bots...")
+    owners = get_all_owner_broadcast_targets()
+    s, f = await _cross_bot_broadcast(bot, message.html_text, owners, "owner_user_id")
+    
+    await status_msg.edit_text(f"✅ <b>Broadcast Completed!</b>\n\n🎯 Sent: {s}\n❌ Failed: {f}", parse_mode="HTML")
+    await state.clear()
+
+
+@router.message(Command("brall"))
+async def cmd_brall(message: Message, state: FSMContext):
+    if message.from_user.id != config.ADMIN_ID:
+        return
+    await state.set_state(AdminBroadcast.waiting_for_brall)
+    markup = InlineKeyboardMarkup(inline_keyboard=[[InlineKeyboardButton(text="Cancel", callback_data="admin_cancel_br")]])
+    await message.answer("📢 <b>Broadcast to EVERYONE (Main + Clone Users)</b>\nSend the TEXT message (HTML supported) you want to broadcast:", reply_markup=markup, parse_mode="HTML")
+
+@router.message(AdminBroadcast.waiting_for_brall)
+async def process_brall(message: Message, state: FSMContext, bot: Bot):
+    if not message.html_text:
+        await message.reply("Only text messages are supported for cross-bot broadcast. Please send text.")
+        return
+        
+    status_msg = await message.reply("🚀 Broadcasting to ALL users...")
+    success = 0
+    failed = 0
+    
+    # 1. Main bot users
+    main_users = get_all_main_bot_users()
+    for uid in main_users:
+        try:
+            await bot.send_message(uid, message.html_text, parse_mode="HTML")
+            success += 1
+        except Exception:
+            failed += 1
+        await asyncio.sleep(0.05)
+        
+    # 2. Clone bot users
+    clone_users = get_all_clone_bot_users()
+    s, f = await _cross_bot_broadcast(bot, message.html_text, clone_users, "user_id")
+    success += s
+    failed += f
+    
+    await status_msg.edit_text(f"✅ <b>Broadcast Completed!</b>\n\n🎯 Sent: {success}\n❌ Failed: {failed}", parse_mode="HTML")
+    await state.clear()
+
+
+@router.callback_query(F.data == "admin_cancel_br")
+async def cancel_admin_br(callback: CallbackQuery, state: FSMContext):
+    if callback.from_user.id != config.ADMIN_ID:
+        return
+    await state.clear()
+    await callback.message.edit_text("Broadcast cancelled.")
+    await callback.answer()
+

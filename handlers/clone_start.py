@@ -121,6 +121,7 @@ async def show_owner_dashboard(message: Message, bot_id: int, bot_username: str)
         [InlineKeyboardButton(text=t("BTN_CONNECT_GROUP", lang), callback_data="owner_connect_group", style="primary")],
         [InlineKeyboardButton(text=t("BTN_MANAGE_GROUPS", lang).format(count=group_count), callback_data="owner_manage_groups", style="primary")],
         [InlineKeyboardButton(text=t("BTN_WALLET", lang), callback_data="owner_wallet", style="primary")],
+        [InlineKeyboardButton(text="📢 Broadcast to Users", callback_data="owner_broadcast", style="primary")],
         [InlineKeyboardButton(text=t("BTN_GROUP_CMDS", lang), callback_data="owner_grpcmds", style="primary")],
     ])
 

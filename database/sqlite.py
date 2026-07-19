@@ -131,6 +131,12 @@ def init_db():
             PRIMARY KEY (group_id, user_id)
         )
     ''')
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS group_settings (
+            group_id INTEGER PRIMARY KEY,
+            protection_enabled INTEGER DEFAULT 1
+        )
+    ''')
     # Safe migration: add lang_code to connected_groups if it doesn't exist
     try:
         cursor.execute("ALTER TABLE connected_groups ADD COLUMN lang_code TEXT DEFAULT 'en'")
@@ -710,3 +716,102 @@ def is_whitelisted(group_id: int, user_id: int) -> bool:
     row = cursor.fetchone()
     conn.close()
     return row is not None
+
+# ─── Group Settings ───────────────────────────────────────
+
+def get_group_protection(group_id: int) -> bool:
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT protection_enabled FROM group_settings WHERE group_id = ?', (group_id,))
+    row = cursor.fetchone()
+    conn.close()
+    # If no setting exists, default is 1 (True)
+    return bool(row[0]) if row else True
+
+def set_group_protection(group_id: int, enabled: bool):
+    val = 1 if enabled else 0
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        INSERT INTO group_settings (group_id, protection_enabled)
+        VALUES (?, ?)
+        ON CONFLICT(group_id) DO UPDATE SET protection_enabled = excluded.protection_enabled
+    ''', (group_id, val))
+    conn.commit()
+    conn.close()
+
+# ─── Broadcast Targets ────────────────────────────────────
+
+def get_all_main_bot_users():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT DISTINCT user_id FROM (
+            SELECT user_id FROM user_languages
+            UNION SELECT user_id FROM payments
+            UNION SELECT user_id FROM crypto_invoices
+            UNION SELECT user_id FROM group_subscriptions
+        ) WHERE user_id IS NOT NULL
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    return [r[0] for r in rows]
+
+def get_all_clone_bot_users():
+    """Returns a list of dicts: [{'user_id': 123, 'bot_id': 456, 'bot_token': '...'}]"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT DISTINCT u.user_id, u.bot_id, b.bot_token 
+        FROM (
+            SELECT user_id, bot_id FROM clone_subscriptions
+            UNION SELECT user_id, bot_id FROM clone_crypto_invoices
+        ) u
+        JOIN cloned_bots b ON u.bot_id = b.bot_id
+        WHERE u.user_id IS NOT NULL AND u.bot_id IS NOT NULL AND b.clone_status = 'active'
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"user_id": r[0], "bot_id": r[1], "bot_token": r[2]} for r in rows]
+
+def get_clone_bot_users(bot_id: int):
+    """Returns a list of user_ids for a specific cloned bot"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT DISTINCT user_id FROM (
+            SELECT user_id FROM clone_subscriptions WHERE bot_id = ?
+            UNION SELECT user_id FROM clone_crypto_invoices WHERE bot_id = ?
+        ) WHERE user_id IS NOT NULL
+    ''', (bot_id, bot_id))
+    rows = cursor.fetchall()
+    conn.close()
+    return [r[0] for r in rows]
+
+def get_all_group_broadcast_targets():
+    """Returns a list of dicts: [{'group_id': 123, 'bot_token': '...'}]"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT g.group_id, b.bot_token 
+        FROM connected_groups g 
+        JOIN cloned_bots b ON g.bot_id = b.bot_id
+        WHERE b.clone_status = 'active'
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"group_id": r[0], "bot_token": r[1]} for r in rows]
+
+def get_all_owner_broadcast_targets():
+    """Returns a list of dicts: [{'owner_user_id': 123, 'bot_token': '...'}]"""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('''
+        SELECT owner_user_id, bot_token 
+        FROM cloned_bots 
+        WHERE clone_status = 'active'
+    ''')
+    rows = cursor.fetchall()
+    conn.close()
+    return [{"owner_user_id": r[0], "bot_token": r[1]} for r in rows]
+

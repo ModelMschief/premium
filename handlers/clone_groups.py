@@ -8,7 +8,7 @@ from database.sqlite import (
     get_connected_group, get_clone_subscription, get_cloned_bot_by_id,
     add_connected_group, get_group_lang, get_user_lang,
     add_to_whitelist, remove_from_whitelist, is_whitelisted,
-    get_group_packages
+    get_group_packages, get_group_protection
 )
 import config
 from locales import t
@@ -268,6 +268,10 @@ async def clone_group_message_filter(message: Message):
     if not group_data:
         return
     if group_data["bot_id"] != bot_info.id:
+        return
+
+    # Check if protection is disabled for this group
+    if not get_group_protection(group_id):
         return
 
     # ── Allow: Bot owner ────────────────────────────────────

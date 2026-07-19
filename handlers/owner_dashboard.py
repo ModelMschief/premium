@@ -9,7 +9,8 @@ from database.sqlite import (
     delete_group_package, get_group_package_by_id, update_group_package,
     get_creator_balance, set_withdrawal_address, debit_creator_balance,
     create_withdrawal, complete_withdrawal, fail_withdrawal,
-    set_group_lang, get_user_lang
+    set_group_lang, get_user_lang, get_group_protection, set_group_protection,
+    get_clone_bot_users
 )
 import config
 import aiohttp
@@ -28,6 +29,7 @@ class OwnerStates(StatesGroup):
     waiting_for_package = State()
     waiting_for_edit_package = State()
     waiting_for_wallet_address = State()
+    waiting_for_broadcast = State()
 
 
 # ─── Helper: Check if user is owner ─────────────────────────
@@ -149,6 +151,10 @@ async def owner_group_detail(callback: CallbackQuery):
 
     msg = f"📢 <b>Group Packages</b>\n🆔 <code>{group_id}</code>\n\n"
 
+    protection = get_group_protection(group_id)
+    prot_status = "🟢 ON" if protection else "🔴 OFF"
+    msg += f"🛡 <b>Protection Status:</b> {prot_status}\n\n"
+
     if packages:
         for pkg in packages:
             msg += f"  📦 <b>{pkg['duration_days']} Days</b> — ⭐️ {pkg['stars_price']} / 🪙 {pkg['usdt_price']} USDT\n"
@@ -156,6 +162,7 @@ async def owner_group_detail(callback: CallbackQuery):
         msg += "<i>No packages configured yet.</i>\n"
 
     buttons = [
+        [InlineKeyboardButton(text=f"🛡 Toggle Protection", callback_data=f"owner_togprot_{group_id}", style="primary")],
         [InlineKeyboardButton(text="➕ Add Package", callback_data=f"owner_addpkg_{group_id}", style="primary")],
         [InlineKeyboardButton(text=t("BTN_SET_GROUP_LANG", "en"), callback_data=f"owner_setlang_{group_id}", style="primary")],
     ]
@@ -170,6 +177,21 @@ async def owner_group_detail(callback: CallbackQuery):
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
     await callback.message.edit_text(msg, reply_markup=markup, parse_mode="HTML")
     await callback.answer()
+
+
+@router.callback_query(F.data.startswith("owner_togprot_"))
+async def owner_toggle_protection(callback: CallbackQuery):
+    if not await is_owner(callback):
+        await callback.answer("Only the bot owner can access this.", show_alert=True)
+        return
+
+    group_id = int(callback.data.split("_")[2])
+    current_prot = get_group_protection(group_id)
+    set_group_protection(group_id, not current_prot)
+
+    # Refresh the view
+    callback.data = f"owner_group_{group_id}"
+    await owner_group_detail(callback)
 
 
 # ─── Add package ──────────────────────────────────────────────
@@ -613,3 +635,56 @@ async def owner_group_commands(callback: CallbackQuery):
         markup
     )
     await callback.answer()
+
+# ═══════════════════════════════════════════════════════════════
+# BROADCAST
+# ═══════════════════════════════════════════════════════════════
+
+@router.callback_query(F.data == "owner_broadcast")
+async def owner_broadcast_start(callback: CallbackQuery, state: FSMContext):
+    if not await is_owner(callback):
+        await callback.answer("Only the bot owner can access this.", show_alert=True)
+        return
+
+    await state.set_state(OwnerStates.waiting_for_broadcast)
+    markup = InlineKeyboardMarkup(inline_keyboard=[
+        [InlineKeyboardButton(text="🔙 Cancel", callback_data="clone_main_menu", style="primary")]
+    ])
+    await callback.message.edit_text(
+        "📢 <b>Broadcast to Users</b>\n\n"
+        "Send the message you want to broadcast to all users of your bot.\n"
+        "<i>(You can send text, photos, videos, or documents!)</i>",
+        reply_markup=markup, parse_mode="HTML"
+    )
+    await callback.answer()
+
+@router.message(OwnerStates.waiting_for_broadcast)
+async def process_owner_broadcast(message: Message, state: FSMContext):
+    bot_info = await message.bot.get_me()
+    users = get_clone_bot_users(bot_info.id)
+    
+    if not users:
+        await message.reply("There are no users to broadcast to yet.")
+        await state.clear()
+        return
+
+    status_msg = await message.reply(f"🚀 Broadcasting to {len(users)} users...")
+    success = 0
+    failed = 0
+
+    import asyncio
+    for u_id in users:
+        try:
+            await message.copy_to(u_id)
+            success += 1
+        except Exception:
+            failed += 1
+        await asyncio.sleep(0.05)  # Avoid rate limits
+
+    await status_msg.edit_text(
+        f"✅ <b>Broadcast Completed!</b>\n\n"
+        f"🎯 Sent: {success}\n"
+        f"❌ Failed: {failed}",
+        parse_mode="HTML"
+    )
+    await state.clear()
