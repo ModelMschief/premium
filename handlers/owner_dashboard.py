@@ -145,8 +145,9 @@ async def render_group_detail(callback: CallbackQuery, group_id: int):
     packages = get_group_packages(group_id)
     msg = f"📢 <b>Group Packages</b>\n🆔 <code>{group_id}</code>\n\n"
 
+    lang = get_user_lang(callback.from_user.id) or "en"
     protection = get_group_protection(group_id)
-    prot_status = "🟢 ON" if protection else "🔴 OFF"
+    prot_status = t("STATUS_ON", lang) if protection else t("STATUS_OFF", lang)
     msg += f"🛡 <b>Protection Status:</b> {prot_status}\n\n"
 
     if packages:
@@ -155,8 +156,9 @@ async def render_group_detail(callback: CallbackQuery, group_id: int):
     else:
         msg += "<i>No packages configured yet.</i>\n"
 
+    btn_tog_prot = t("BTN_TOGGLE_PROT", lang).format(prot_status=prot_status)
     buttons = [
-        [InlineKeyboardButton(text=f"🛡 Toggle Protection ({prot_status})", callback_data=f"owner_togprot_{group_id}", style="primary")],
+        [InlineKeyboardButton(text=btn_tog_prot, callback_data=f"owner_togprot_{group_id}", style="primary")],
         [InlineKeyboardButton(text="➕ Add Package", callback_data=f"owner_addpkg_{group_id}", style="primary")],
         [InlineKeyboardButton(text=t("BTN_SET_GROUP_LANG", "en"), callback_data=f"owner_setlang_{group_id}", style="primary")],
     ]
@@ -649,14 +651,13 @@ async def owner_broadcast_start(callback: CallbackQuery, state: FSMContext):
         await callback.answer("Only the bot owner can access this.", show_alert=True)
         return
 
+    lang = get_user_lang(callback.from_user.id) or "en"
     await state.set_state(OwnerStates.waiting_for_broadcast)
     markup = InlineKeyboardMarkup(inline_keyboard=[
-        [InlineKeyboardButton(text="🔙 Cancel", callback_data="clone_main_menu", style="primary")]
+        [InlineKeyboardButton(text=t("BTN_CANCEL", lang), callback_data="clone_main_menu", style="primary")]
     ])
     await callback.message.edit_text(
-        "📢 <b>Broadcast to Users</b>\n\n"
-        "Send the message you want to broadcast to all users of your bot.\n"
-        "<i>(You can send text, photos, videos, or documents!)</i>",
+        t("BROADCAST_PROMPT", lang),
         reply_markup=markup, parse_mode="HTML"
     )
     await callback.answer()
@@ -665,13 +666,14 @@ async def owner_broadcast_start(callback: CallbackQuery, state: FSMContext):
 async def process_owner_broadcast(message: Message, state: FSMContext):
     bot_info = await message.bot.get_me()
     users = get_clone_bot_users(bot_info.id)
+    lang = get_user_lang(message.from_user.id) or "en"
     
     if not users:
-        await message.reply("There are no users to broadcast to yet.")
+        await message.reply(t("BROADCAST_NO_USERS", lang))
         await state.clear()
         return
 
-    status_msg = await message.reply(f"🚀 Broadcasting to {len(users)} users...")
+    status_msg = await message.reply(t("BROADCAST_STARTING", lang).format(count=len(users)))
     success = 0
     failed = 0
 
@@ -685,9 +687,7 @@ async def process_owner_broadcast(message: Message, state: FSMContext):
         await asyncio.sleep(0.05)  # Avoid rate limits
 
     await status_msg.edit_text(
-        f"✅ <b>Broadcast Completed!</b>\n\n"
-        f"🎯 Sent: {success}\n"
-        f"❌ Failed: {failed}",
+        t("BROADCAST_COMPLETED", lang).format(success=success, failed=failed),
         parse_mode="HTML"
     )
     await state.clear()

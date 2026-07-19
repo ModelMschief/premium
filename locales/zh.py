@@ -144,3 +144,20 @@ BTN_MANAGE_BOT = "{icon} 管理 @{username}"
 CLONE_SEND_TOKEN_TITLE = "🔑 发送您的机器人令牌"
 CLONE_SEND_TOKEN_BODY = "<p>打开 <a href='https://t.me/BotFather'>@BotFather</a>，创建一个新机器人，然后在此处发送您的 <b>API 令牌</b>。</p><p>它的格式类似：<br><code>123456:ABCdefGHIjkl...</code></p>"
 
+
+# Dashboard & Broadcast Features
+BTN_TOGGLE_PROT = "🛡 切换保护 ({prot_status})"
+BTN_BROADCAST = "📢 向用户广播"
+BTN_CANCEL = "🔙 取消"
+STATUS_ON = "🟢 开启"
+STATUS_OFF = "🔴 关闭"
+BROADCAST_PROMPT = """📢 <b>向用户广播</b>
+
+发送您想向机器人的所有用户广播的消息。
+<i>(您可以发送文本，照片，视频或文档！)</i>"""
+BROADCAST_NO_USERS = "目前没有可广播的用户。"
+BROADCAST_STARTING = "🚀 正在向 {count} 名用户广播..."
+BROADCAST_COMPLETED = """✅ <b>广播完成！</b>
+
+🎯 发送成功: {success}
+❌ 发送失败: {failed}"""

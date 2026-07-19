@@ -145,3 +145,20 @@ BTN_MANAGE_BOT = "{icon} Керування @{username}"
 CLONE_SEND_TOKEN_TITLE = "🔑 Надішліть токен вашого бота"
 CLONE_SEND_TOKEN_BODY = "<p>Відкрийте <a href='https://t.me/BotFather'>@BotFather</a>, створіть нового бота та надішліть мені <b>API токен</b> тут.</p><p>Він виглядає так:<br><code>123456:ABCdefGHIjkl...</code></p>"
 
+
+# Dashboard & Broadcast Features
+BTN_TOGGLE_PROT = "🛡 Перемкнути захист ({prot_status})"
+BTN_BROADCAST = "📢 Розсилка користувачам"
+BTN_CANCEL = "🔙 Скасувати"
+STATUS_ON = "🟢 УВІМК"
+STATUS_OFF = "🔴 ВИМК"
+BROADCAST_PROMPT = """📢 <b>Розсилка користувачам</b>
+
+Надішліть повідомлення, яке хочете розіслати всім користувачам вашого бота.
+<i>(Ви можете надіслати текст, фото, відео або документи!)</i>"""
+BROADCAST_NO_USERS = "Поки немає користувачів для розсилки."
+BROADCAST_STARTING = "🚀 Розсилка {count} користувачам..."
+BROADCAST_COMPLETED = """✅ <b>Розсилку завершено!</b>
+
+🎯 Відправлено: {success}
+❌ Помилка: {failed}"""

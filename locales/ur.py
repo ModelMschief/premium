@@ -144,3 +144,20 @@ BTN_MANAGE_BOT = "{icon} @{username} کا نظم کریں"
 CLONE_SEND_TOKEN_TITLE = "🔑 اپنا بوٹ ٹوکن بھیجیں"
 CLONE_SEND_TOKEN_BODY = "<p><a href='https://t.me/BotFather'>@BotFather</a> کھولیں، ایک نیا بوٹ بنائیں، اور مجھے یہاں <b>API ٹوکن</b> بھیجیں۔</p><p>یہ کچھ ایسا لگتا ہے:<br><code>123456:ABCdefGHIjkl...</code></p>"
 
+
+# Dashboard & Broadcast Features
+BTN_TOGGLE_PROT = "🛡 پروٹیکشن ٹوگل کریں ({prot_status})"
+BTN_BROADCAST = "📢 صارفین کو براڈکاسٹ کریں"
+BTN_CANCEL = "🔙 منسوخ کریں"
+STATUS_ON = "🟢 آن"
+STATUS_OFF = "🔴 آف"
+BROADCAST_PROMPT = """📢 <b>صارفین کو براڈکاسٹ کریں</b>
+
+وہ پیغام بھیجیں جو آپ اپنے بوٹ کے تمام صارفین کو بھیجنا چاہتے ہیں۔
+<i>(آپ متن، تصاویر، ویڈیوز یا دستاویزات بھیج سکتے ہیں!)</i>"""
+BROADCAST_NO_USERS = "براڈکاسٹ کرنے کے لیے ابھی کوئی صارفین نہیں ہیں۔"
+BROADCAST_STARTING = "🚀 {count} صارفین کو براڈکاسٹ کیا جا رہا ہے..."
+BROADCAST_COMPLETED = """✅ <b>براڈکاسٹ مکمل!</b>
+
+🎯 بھیجے گئے: {success}
+❌ ناکام: {failed}"""

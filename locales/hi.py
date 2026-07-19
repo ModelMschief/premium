@@ -145,3 +145,20 @@ BTN_MANAGE_BOT = "{icon} @{username} मैनेज करें"
 CLONE_SEND_TOKEN_TITLE = "🔑 अपना बॉट टोकन भेजें"
 CLONE_SEND_TOKEN_BODY = "<p><a href='https://t.me/BotFather'>@BotFather</a> खोलें, एक नया बॉट बनाएं, और मुझे यहाँ <b>API टोकन</b> भेजें।</p><p>यह कुछ ऐसा दिखता है:<br><code>123456:ABCdefGHIjkl...</code></p>"
 
+
+# Dashboard & Broadcast Features
+BTN_TOGGLE_PROT = "🛡 सुरक्षा चालू/बंद करें ({prot_status})"
+BTN_BROADCAST = "📢 उपयोगकर्ताओं को प्रसारण"
+BTN_CANCEL = "🔙 रद्द करें"
+STATUS_ON = "🟢 चालू"
+STATUS_OFF = "🔴 बंद"
+BROADCAST_PROMPT = """📢 <b>उपयोगकर्ताओं को प्रसारण</b>
+
+वह संदेश भेजें जिसे आप अपने बॉट के सभी उपयोगकर्ताओं को प्रसारित करना चाहते हैं।
+<i>(आप पाठ, चित्र, वीडियो या दस्तावेज़ भेज सकते हैं!)</i>"""
+BROADCAST_NO_USERS = "अभी तक प्रसारण के लिए कोई उपयोगकर्ता नहीं है।"
+BROADCAST_STARTING = "🚀 {count} उपयोगकर्ताओं को प्रसारण हो रहा है..."
+BROADCAST_COMPLETED = """✅ <b>प्रसारण पूरा हुआ!</b>
+
+🎯 भेजा गया: {success}
+❌ विफल: {failed}"""

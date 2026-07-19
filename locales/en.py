@@ -164,3 +164,20 @@ BTN_BUY_SLOTS = "🛒 Buy +5 Slots (⭐️ {stars} / 🪙 {usdt} USDT)"
 BTN_MANAGE_BOT = "{icon} Manage @{username}"
 CLONE_SEND_TOKEN_TITLE = "🔑 Send Your Bot Token"
 CLONE_SEND_TOKEN_BODY = "<p>Open <a href='https://t.me/BotFather'>@BotFather</a>, create a new bot, and send me the <b>API token</b> here.</p><p>It looks like:<br><code>123456:ABCdefGHIjkl...</code></p>"
+
+# Dashboard & Broadcast Features
+BTN_TOGGLE_PROT = "🛡 Toggle Protection ({prot_status})"
+BTN_BROADCAST = "📢 Broadcast to Users"
+BTN_CANCEL = "🔙 Cancel"
+STATUS_ON = "🟢 ON"
+STATUS_OFF = "🔴 OFF"
+BROADCAST_PROMPT = """📢 <b>Broadcast to Users</b>
+
+Send the message you want to broadcast to all users of your bot.
+<i>(You can send text, photos, videos, or documents!)</i>"""
+BROADCAST_NO_USERS = "There are no users to broadcast to yet."
+BROADCAST_STARTING = "🚀 Broadcasting to {count} users..."
+BROADCAST_COMPLETED = """✅ <b>Broadcast Completed!</b>
+
+🎯 Sent: {success}
+❌ Failed: {failed}"""

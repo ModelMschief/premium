@@ -144,3 +144,20 @@ BTN_MANAGE_BOT = "{icon} إدارة @{username}"
 CLONE_SEND_TOKEN_TITLE = "🔑 أرسل توكن البوت الخاص بك"
 CLONE_SEND_TOKEN_BODY = "<p>افتح <a href='https://t.me/BotFather'>@BotFather</a>، وأنشئ بوتاً جديداً، ثم أرسل لي <b>API Token</b> هنا.</p><p>يبدو هكذا:<br><code>123456:ABCdefGHIjkl...</code></p>"
 
+
+# Dashboard & Broadcast Features
+BTN_TOGGLE_PROT = "🛡 تبديل الحماية ({prot_status})"
+BTN_BROADCAST = "📢 بث للمستخدمين"
+BTN_CANCEL = "🔙 إلغاء"
+STATUS_ON = "🟢 تشغيل"
+STATUS_OFF = "🔴 إيقاف"
+BROADCAST_PROMPT = """📢 <b>بث للمستخدمين</b>
+
+أرسل الرسالة التي تريد بثها لجميع مستخدمي البوت الخاص بك.
+<i>(يمكنك إرسال نص، صور، فيديو، أو مستندات!)</i>"""
+BROADCAST_NO_USERS = "لا يوجد مستخدمين للبث إليهم بعد."
+BROADCAST_STARTING = "🚀 جاري البث إلى {count} مستخدم..."
+BROADCAST_COMPLETED = """✅ <b>اكتمل البث!</b>
+
+🎯 تم الإرسال: {success}
+❌ فشل: {failed}"""
