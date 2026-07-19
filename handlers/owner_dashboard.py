@@ -140,15 +140,9 @@ async def owner_manage_groups(callback: CallbackQuery):
 
 
 # ─── View group packages ─────────────────────────────────────
-@router.callback_query(F.data.startswith("owner_group_"))
-async def owner_group_detail(callback: CallbackQuery):
-    if not await is_owner(callback):
-        await callback.answer("Only the bot owner can access this.", show_alert=True)
-        return
 
-    group_id = int(callback.data.split("_")[2])
+async def render_group_detail(callback: CallbackQuery, group_id: int):
     packages = get_group_packages(group_id)
-
     msg = f"📢 <b>Group Packages</b>\n🆔 <code>{group_id}</code>\n\n"
 
     protection = get_group_protection(group_id)
@@ -179,6 +173,16 @@ async def owner_group_detail(callback: CallbackQuery):
     await callback.answer()
 
 
+@router.callback_query(F.data.startswith("owner_group_"))
+async def owner_group_detail(callback: CallbackQuery):
+    if not await is_owner(callback):
+        await callback.answer("Only the bot owner can access this.", show_alert=True)
+        return
+
+    group_id = int(callback.data.split("_")[2])
+    await render_group_detail(callback, group_id)
+
+
 @router.callback_query(F.data.startswith("owner_togprot_"))
 async def owner_toggle_protection(callback: CallbackQuery):
     if not await is_owner(callback):
@@ -189,9 +193,8 @@ async def owner_toggle_protection(callback: CallbackQuery):
     current_prot = get_group_protection(group_id)
     set_group_protection(group_id, not current_prot)
 
-    # Refresh the view
-    callback.data = f"owner_group_{group_id}"
-    await owner_group_detail(callback)
+    # Refresh the view safely
+    await render_group_detail(callback, group_id)
 
 
 # ─── Add package ──────────────────────────────────────────────
