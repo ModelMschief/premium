@@ -1,6 +1,7 @@
 from aiogram import Router, F
 from aiogram.filters import CommandStart, CommandObject
 from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.fsm.context import FSMContext
 from database.sqlite import (
     get_cloned_bot_by_id, get_connected_groups, get_group_packages,
     get_clone_subscription, get_user_lang, get_group_lang
@@ -209,7 +210,8 @@ async def view_group_sub(callback: CallbackQuery):
 
 # ─── Callback: Back to clone main menu ───────────────────────
 @router.callback_query(F.data == "clone_main_menu")
-async def clone_main_menu(callback: CallbackQuery):
+async def clone_main_menu(callback: CallbackQuery, state: FSMContext):
+    await state.clear()
     bot_info = await callback.bot.get_me()
     bot_id = bot_info.id
     clone_data = get_cloned_bot_by_id(bot_id)
@@ -229,6 +231,7 @@ async def clone_main_menu(callback: CallbackQuery):
             [InlineKeyboardButton(text=t("BTN_CONNECT_GROUP", lang), callback_data="owner_connect_group", style="primary")],
             [InlineKeyboardButton(text=t("BTN_MANAGE_GROUPS", lang).format(count=group_count), callback_data="owner_manage_groups", style="primary")],
             [InlineKeyboardButton(text=t("BTN_WALLET", lang), callback_data="owner_wallet", style="primary")],
+            [InlineKeyboardButton(text="📢 Broadcast to Users", callback_data="owner_broadcast", style="primary")],
             [InlineKeyboardButton(text=t("BTN_GROUP_CMDS", lang), callback_data="owner_grpcmds", style="primary")],
         ])
         msg_html = (

@@ -732,11 +732,14 @@ def set_group_protection(group_id: int, enabled: bool):
     val = 1 if enabled else 0
     conn = sqlite3.connect(DB_PATH)
     cursor = conn.cursor()
-    cursor.execute('''
-        INSERT INTO group_settings (group_id, protection_enabled)
-        VALUES (?, ?)
-        ON CONFLICT(group_id) DO UPDATE SET protection_enabled = excluded.protection_enabled
-    ''', (group_id, val))
+    
+    # Check if setting already exists
+    cursor.execute('SELECT group_id FROM group_settings WHERE group_id = ?', (group_id,))
+    if cursor.fetchone():
+        cursor.execute('UPDATE group_settings SET protection_enabled = ? WHERE group_id = ?', (val, group_id))
+    else:
+        cursor.execute('INSERT INTO group_settings (group_id, protection_enabled) VALUES (?, ?)', (group_id, val))
+        
     conn.commit()
     conn.close()
 
