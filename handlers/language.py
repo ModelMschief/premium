@@ -3,7 +3,9 @@ Shared language picker handler.
 Registered by BOTH the main bot and every clone bot dispatcher.
 """
 from aiogram import Router, F
-from aiogram.types import CallbackQuery, InlineKeyboardMarkup, InlineKeyboardButton
+from aiogram.filters import Command
+from aiogram.types import CallbackQuery, Message, InlineKeyboardMarkup, InlineKeyboardButton
+from rich_utils import safe_send_rich_message
 from database.sqlite import set_user_lang
 from locales import LANG_NAMES, t
 
@@ -22,6 +24,17 @@ def build_lang_picker_markup(callback_prefix: str = "setlang") -> InlineKeyboard
             row.append(InlineKeyboardButton(text=label, callback_data=f"{callback_prefix}_{code}"))
         buttons.append(row)
     return InlineKeyboardMarkup(inline_keyboard=buttons)
+
+
+# ── Global /lang command ──────────────────────────────────────
+@router.message(Command("lang"))
+async def lang_cmd(message: Message):
+    """Show the language picker via command."""
+    await safe_send_rich_message(
+        message.bot, message.chat.id,
+        "<h2>🌐 Select Language / Выберите язык / 语言选择</h2>",
+        build_lang_picker_markup("setlang")
+    )
 
 
 # ── Main-bot language change (settings) ─────────────────────

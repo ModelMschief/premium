@@ -4,7 +4,8 @@ from aiogram.types import Message, CallbackQuery, InlineKeyboardMarkup, InlineKe
 from aiogram.fsm.context import FSMContext
 from database.sqlite import (
     get_cloned_bot_by_id, get_connected_groups, get_group_packages,
-    get_clone_subscription, get_user_lang, get_group_lang
+    get_clone_subscription, get_user_lang, get_group_lang,
+    check_and_add_clone_bot_start
 )
 import config
 import datetime
@@ -46,8 +47,9 @@ async def clone_cmd_start(message: Message, command: CommandObject):
     owner_user_id = clone_data["owner_user_id"]
     user_id = message.from_user.id
 
-    # ─── First-time user (Owner or Regular): show language picker ───────────
-    if get_user_lang(user_id) is None:
+    # ─── First-time user (Owner or Regular) for THIS bot: show language picker ───────────
+    is_first_time = check_and_add_clone_bot_start(bot_id, user_id)
+    if get_user_lang(user_id) is None or is_first_time:
         await safe_send_rich_message(
             message.bot, message.chat.id,
             "<h2>🌐 Select Language / Выберите язык / 语言选择</h2>",
@@ -81,7 +83,8 @@ async def clone_cmd_start(message: Message, command: CommandObject):
         buttons = []
         if viral:
             buttons.append(viral)
-        markup = InlineKeyboardMarkup(inline_keyboard=buttons) if buttons else None
+        buttons.append([InlineKeyboardButton(text="🌐 Language", callback_data="show_language_picker")])
+        markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
         msg_html = (
             f"<h3>{t('CLONE_WELCOME_TITLE', lang)}</h3>\n"
@@ -101,6 +104,8 @@ async def clone_cmd_start(message: Message, command: CommandObject):
     viral = get_viral_button()
     if viral:
         buttons.append(viral)
+
+    buttons.append([InlineKeyboardButton(text="🌐 Language", callback_data="show_language_picker", style="secondary")])
 
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -124,6 +129,7 @@ async def show_owner_dashboard(message: Message, bot_id: int, bot_username: str)
         [InlineKeyboardButton(text=t("BTN_WALLET", lang), callback_data="owner_wallet", style="primary")],
         [InlineKeyboardButton(text=t("BTN_BROADCAST", lang), callback_data="owner_broadcast", style="primary")],
         [InlineKeyboardButton(text=t("BTN_GROUP_CMDS", lang), callback_data="owner_grpcmds", style="primary")],
+        [InlineKeyboardButton(text="🌐 Language", callback_data="show_language_picker", style="secondary")],
     ])
 
     msg_html = (
@@ -233,6 +239,7 @@ async def clone_main_menu(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text=t("BTN_WALLET", lang), callback_data="owner_wallet", style="primary")],
             [InlineKeyboardButton(text=t("BTN_BROADCAST", lang), callback_data="owner_broadcast", style="primary")],
             [InlineKeyboardButton(text=t("BTN_GROUP_CMDS", lang), callback_data="owner_grpcmds", style="primary")],
+            [InlineKeyboardButton(text="🌐 Language", callback_data="show_language_picker", style="secondary")],
         ])
         msg_html = (
             f"<h3>{t('OWNER_DASH_TITLE', lang)}</h3>\n"

@@ -105,6 +105,13 @@ def init_db():
         )
     ''')
     cursor.execute('''
+        CREATE TABLE IF NOT EXISTS clone_bot_starts (
+            bot_id INTEGER NOT NULL,
+            user_id INTEGER NOT NULL,
+            PRIMARY KEY (bot_id, user_id)
+        )
+    ''')
+    cursor.execute('''
         CREATE TABLE IF NOT EXISTS clone_crypto_invoices (
             invoice_id TEXT PRIMARY KEY,
             user_id INTEGER NOT NULL,
@@ -818,3 +825,14 @@ def get_all_owner_broadcast_targets():
     conn.close()
     return [{"owner_user_id": r[0], "bot_token": r[1]} for r in rows]
 
+def check_and_add_clone_bot_start(bot_id: int, user_id: int) -> bool:
+    """Returns True if this is the first time the user started this specific bot."""
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    cursor.execute('SELECT 1 FROM clone_bot_starts WHERE bot_id = ? AND user_id = ?', (bot_id, user_id))
+    exists = cursor.fetchone() is not None
+    if not exists:
+        cursor.execute('INSERT INTO clone_bot_starts (bot_id, user_id) VALUES (?, ?)', (bot_id, user_id))
+        conn.commit()
+    conn.close()
+    return not exists
