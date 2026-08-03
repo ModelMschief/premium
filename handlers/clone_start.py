@@ -105,7 +105,7 @@ async def clone_cmd_start(message: Message, command: CommandObject):
     if viral:
         buttons.append(viral)
 
-    buttons.append([InlineKeyboardButton(text="🌐 Language", callback_data="show_language_picker", style="secondary")])
+    buttons.append([InlineKeyboardButton(text="🌐 Language", callback_data="show_language_picker", style="primary")])
 
     markup = InlineKeyboardMarkup(inline_keyboard=buttons)
 
@@ -129,7 +129,7 @@ async def show_owner_dashboard(message: Message, bot_id: int, bot_username: str)
         [InlineKeyboardButton(text=t("BTN_WALLET", lang), callback_data="owner_wallet", style="primary")],
         [InlineKeyboardButton(text=t("BTN_BROADCAST", lang), callback_data="owner_broadcast", style="primary")],
         [InlineKeyboardButton(text=t("BTN_GROUP_CMDS", lang), callback_data="owner_grpcmds", style="primary")],
-        [InlineKeyboardButton(text="🌐 Language", callback_data="show_language_picker", style="secondary")],
+        [InlineKeyboardButton(text="🌐 Language", callback_data="show_language_picker", style="primary")],
     ])
 
     msg_html = (
@@ -239,7 +239,7 @@ async def clone_main_menu(callback: CallbackQuery, state: FSMContext):
             [InlineKeyboardButton(text=t("BTN_WALLET", lang), callback_data="owner_wallet", style="primary")],
             [InlineKeyboardButton(text=t("BTN_BROADCAST", lang), callback_data="owner_broadcast", style="primary")],
             [InlineKeyboardButton(text=t("BTN_GROUP_CMDS", lang), callback_data="owner_grpcmds", style="primary")],
-            [InlineKeyboardButton(text="🌐 Language", callback_data="show_language_picker", style="secondary")],
+            [InlineKeyboardButton(text="🌐 Language", callback_data="show_language_picker", style="primary")],
         ])
         msg_html = (
             f"<h3>{t('OWNER_DASH_TITLE', lang)}</h3>\n"
