@@ -1,4 +1,4 @@
-aiogram==3.27.0
+aiogram==3.29.0
 motor
 python-dotenv
 shortuuid
